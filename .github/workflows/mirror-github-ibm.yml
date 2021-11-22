@@ -30,10 +30,9 @@ jobs:
         git config --global user.email "mirror@skills.network"
         git config --global user.name "Skills Network Mirror"
         branch="$(git branch --show-current)"
-
         git remote add fixedmirror "${{ format('git@github.ibm.com:{0}/{1}.git', 'skills-network-mirror', inputs.repo_name) }}"
         git fetch fixedmirror
-        
+        git pull fixedmirror/$branch
         echo '{ "settingsInheritedFrom": "whitesource-config/whitesource-config@master" }' > .whitesource
         git add .whitesource
         git commit -m "use GHE .whitesource"
