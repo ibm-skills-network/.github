@@ -29,14 +29,13 @@ jobs:
         export GIT_SSH_COMMAND="ssh -v -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -o IdentitiesOnly=yes"
         git config --global user.email "mirror@skills.network"
         git config --global user.name "Skills Network Mirror"
-        branch="$(git branch --show-current)"
 
         mkdir -p ../fixmirror
         cd ../fixmirror
         git clone "${{ format('git@github.ibm.com:{0}/{1}.git', 'skills-network-mirror', inputs.repo_name) }}"
         cd "${{ inputs.repo_name }}"
 
-        echo '{ "settingsInheritedFrom": "whitesource-config/whitesource-config@master" }' > .whitesource
+        echo ewogIHNldHRpbmdzSW5oZXJpdGVkRnJvbTogd2hpdGVzb3VyY2UtY29uZmlnL3doaXRlc291cmNlLWNvbmZpZ0BtYXN0ZXIKfQo= | base64 -d > .whitesource
         git add .whitesource
         git commit -m "use GHE .whitesource"
         git push
