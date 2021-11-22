@@ -21,6 +21,7 @@ jobs:
         ssh_private_key:
           ${{ secrets.ssh_private_key }}
     - run: |
+        export GIT_SSH_COMMAND="ssh -v -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -l git"
         branch="$(git branch --show-current)"
         echo '{ "settingsInheritedFrom": "whitesource-config/whitesource-config@master" }' > .whitesource
         git add .whitesource
