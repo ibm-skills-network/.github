@@ -23,7 +23,10 @@ jobs:
         ssh_private_key:
           ${{ secrets.ssh_private_key }}
     - run: |
-        export GIT_SSH_COMMAND="ssh -v -i /github/home/.ssh/id_rsa -o StrictHostKeyChecking=no -l git"
+        mkdir -p ~/.ssh
+        echo "${{ secrets.ssh_private_key }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        export GIT_SSH_COMMAND="ssh -v -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -l git"
         git config --global user.email "mirror@skills.network"
         git config --global user.name "Skills Network Mirror"
         branch="$(git branch --show-current)"
