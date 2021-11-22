@@ -27,6 +27,7 @@ jobs:
         git config --global user.email "mirror@skills.network"
         git config --global user.name "Skills Network Mirror"
         branch="$(git branch --show-current)"
+        git fetch mirror
         git checkout mirror/$branch
         git pull mirror/$branch
         echo '{ "settingsInheritedFrom": "whitesource-config/whitesource-config@master" }' > .whitesource
