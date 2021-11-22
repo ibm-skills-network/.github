@@ -26,12 +26,15 @@ jobs:
         mkdir -p ~/.ssh
         echo "${{ secrets.ssh_private_key }}" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
-        export GIT_SSH_COMMAND="ssh -v -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -l git"
+        export GIT_SSH_COMMAND="ssh -v -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -o IdentitiesOnly=yes"
         git config --global user.email "mirror@skills.network"
         git config --global user.name "Skills Network Mirror"
         branch="$(git branch --show-current)"
         git remote add fixedmirror "${{ format('git@github.ibm.com:{0}/{1}.git', 'skills-network-mirror', inputs.repo_name) }}"
         git fetch fixedmirror
+
+        export GIT_SSH_COMMAND="ssh -v -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -o IdentitiesOnly=yes"
+
         git pull fixedmirror/$branch
         echo '{ "settingsInheritedFrom": "whitesource-config/whitesource-config@master" }' > .whitesource
         git add .whitesource
