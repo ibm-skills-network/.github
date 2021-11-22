@@ -24,7 +24,7 @@ jobs:
         export GIT_SSH_COMMAND="ssh -v -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -l git"
         git config --global user.email "mirror@skills.network"
         git config --global user.name "Skills Network Mirror"
-        git checkout master || git checkout main
+        git checkout mirror master || git checkout mirror main
         branch="$(git branch --show-current)"
         echo '{ "settingsInheritedFrom": "whitesource-config/whitesource-config@master" }' > .whitesource
         git add .whitesource
