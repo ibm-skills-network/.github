@@ -31,9 +31,8 @@ jobs:
         git config --global user.name "Skills Network Mirror"
         branch="$(git branch --show-current)"
         git fetch mirror
-        git checkout $branch
-        git pull mirror/$branch
+        git restore -s mirror/$branch
         echo '{ "settingsInheritedFrom": "whitesource-config/whitesource-config@master" }' > .whitesource
         git add .whitesource
         git commit -m "use GHE .whitesource"
-        git push mirror $branch
+        git push mirror/$branch
