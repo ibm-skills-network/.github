@@ -30,11 +30,13 @@ jobs:
         git config --global user.email "mirror@skills.network"
         git config --global user.name "Skills Network Mirror"
         branch="$(git branch --show-current)"
-        git remote add fixedmirror "${{ format('git@github.ibm.com:{0}/{1}.git', 'skills-network-mirror', inputs.repo_name) }}"
-        git fetch fixedmirror
 
-        GIT_SSH_COMMAND="ssh -v -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -o IdentitiesOnly=yes" git pull fixedmirror/$branch
+        mkdir -p ../fixmirror
+        cd ../fixmirror
+        git clone "${{ format('git@github.ibm.com:{0}/{1}.git', 'skills-network-mirror', inputs.repo_name) }}"
+        cd "${{ inputs.repo_name }}"
+
         echo '{ "settingsInheritedFrom": "whitesource-config/whitesource-config@master" }' > .whitesource
         git add .whitesource
         git commit -m "use GHE .whitesource"
-        GIT_SSH_COMMAND="ssh -v -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -o IdentitiesOnly=yes" git push fixedmirror/$branch
+        git push fixedmirror/$branch
