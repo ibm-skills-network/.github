@@ -11,9 +11,11 @@ on:
 jobs:
   mirror:
     name: mirror
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
     - uses: pixta-dev/repository-mirroring-action@v1
       with:
         target_repo_url:
@@ -22,11 +24,10 @@ jobs:
           ${{ secrets.ssh_private_key }}
     - run: |
         export GIT_SSH_COMMAND="ssh -v -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -l git"
-        pwd
-        ls -al
         git config --global user.email "mirror@skills.network"
         git config --global user.name "Skills Network Mirror"
         git status
+        git remote -v
         git checkout mirror master || git checkout mirror main
         branch="$(git branch --show-current)"
         echo '{ "settingsInheritedFrom": "whitesource-config/whitesource-config@master" }' > .whitesource
