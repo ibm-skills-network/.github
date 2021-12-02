@@ -17,7 +17,7 @@ on:
         type: string
       push:
         description: 'Should the docker image be pushed to ICR'
-        default: ${{ startsWith(github.ref, 'refs/tags/') }}
+        default: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || startsWith(github.ref, 'refs/tags/') }}
         required: false
         type: boolean
     secrets:
