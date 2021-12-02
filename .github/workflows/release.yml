@@ -23,13 +23,10 @@ on:
     secrets:
       ICR_USERNAME:
         required: true
-        type: string
       ICR_PASSWORD:
         required: true
-        type: string
       NPM_TOKEN:
         required: true
-        type: string
 
 jobs:
   build:
