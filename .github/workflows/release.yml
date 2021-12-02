@@ -20,16 +20,16 @@ on:
         default: false
         required: false
         type: boolean
-      tags:
-        description: 'Tags for docker image push'
-        default: ''
-        required: false
-        type: string
-      labels:
-        description: 'Labels for docker image push'
-        default: ''
-        required: false
-        type: string
+      # tags:
+      #   description: 'Tags for docker image push'
+      #   default: ''
+      #   required: false
+      #   type: string
+      # labels:
+      #   description: 'Labels for docker image push'
+      #   default: ''
+      #   required: false
+      #   type: string
 
 jobs:
   build:
@@ -70,10 +70,10 @@ jobs:
           context: ${{ inputs.docker_context }}
           target: ${{ inputs.docker_target }}
           push: ${{ inputs.push }}
-          tags: ${{ inputs.tags }}
-          labels: ${{ inputs.labels }}
+          # tags: ${{ inputs.tags }}
+          # labels: ${{ inputs.labels }}
           # push: ${{ github.event_name != 'pull_request' }}
-          # tags: ${{ steps.meta.outputs.tags }}
-          # labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
