@@ -47,6 +47,19 @@ jobs:
           # so you don't need to configure them on your own
           username: ${{ secrets.ICR_USERNAME }}
           password: ${{ secrets.ICR_PASSWORD }}
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v3
+        with:
+          images: ${{ inputs.image }}
+          # Info: https://github.com/docker/metadata-action#tags-input
+          #   - Tag for semantically versioned releases
+          #   - Nightly tag
+          #   - Manual tag (trigger from Github UI)
+          tags: |
+            type=semver,pattern={{version}}
+            type=schedule,pattern=nightly
+            type=raw,value=manual,suffix=${{ github.event.inputs.suffix }},enable=${{ github.event_name == 'workflow_dispatch' }}
       - run: echo "@ibm-skills-network:registry=https://npm.pkg.github.com" > .npmrc
       - run: echo "//npm.pkg.github.com/:_authToken=${{ secrets.NPM_TOKEN }}" >> .npmrc
       - name: Build and push
