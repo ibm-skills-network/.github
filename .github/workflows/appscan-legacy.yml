@@ -1,0 +1,79 @@
+on: 
+  workflow_call:
+    secrets:
+      skills-network-bot-app-id:
+        required: true
+      skills-network-bot-private-key:
+        required: true
+      asoc-key:
+        required: true 
+      asoc-secret:
+        required: true
+    inputs:
+      asoc-asset-group-id:
+        type: string
+        required: false
+        default: 6446167f-1cf6-42cf-b876-962791104daf
+jobs:
+  scan:
+    name: static analysis
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - id: skills-network-bot-app
+      uses: getsentry/action-github-app-token@v1
+      with:
+        app_id: ${{ secrets.skills-network-bot-app-id }}
+        private_key: ${{ secrets.skills-network-bot-private-key }}
+    - name: download SAST client
+      run: |
+        curl -sS https://cloud.appscan.com/api/SCX/StaticAnalyzer/SAClientUtil?os=linux -o /tmp/sast-client.zip
+        unzip -qq /tmp/sast-client.zip -d /tmp
+        SACLIENT_PATH=$(ls /tmp | grep SAClientUtil | head -1)
+        echo "/tmp/$SACLIENT_PATH/bin" >> $GITHUB_PATH
+    - name: upsert appscan app id
+      id: appscan-app-id
+      env:
+        ASOC_KEY: ${{ secrets.asoc-key }}
+        ASOC_SECRET: ${{ secrets.asoc-secret }}
+        REPO_NAME: ${{ github.event.repository.name }}
+        ASOC_ASSET_GROUP_ID: ${{ inputs.asoc-asset-group-id }}
+      run: |
+        echo "fetching AppScan bearer token..."
+        token=$(curl -sS -X POST https://cloud.appscan.com/api/V2/Account/ApiKeyLogin \
+          -H 'accept: application/json' \
+          -H 'Content-Type: application/json' \
+          -d "{ \"KeyId\": \"$ASOC_KEY\", \"KeySecret\": \"$ASOC_SECRET\" }" |
+        jq -r .Token)
+        echo "fetching AppSacn app id..."
+        app_id=$(curl -sS -X GET https://cloud.appscan.com/api/V2/Apps -H "Authorization: Bearer $token" | jq -r ".[] | select(.Name == \"$REPO_NAME\") | .Id")
+
+        if [ -z "$app_id" ]
+        then
+          echo "'$REPO_NAME' does not exist in AppScan. creating..."
+          app_id=$(curl -X 'POST' \
+            'https://cloud.appscan.com/api/V2/Apps' \
+            -H 'accept: application/json' \
+            -H 'Content-Type: application/json' \
+            -H "Authorization: Bearer $token" \
+            -d '{
+              "Name": "'"$REPO_NAME"'",
+              "AssetGroupId": "'"$ASOC_ASSET_GROUP_ID"'",
+            }' | jq -r .Id)
+        fi
+        echo "::set-output name=APPSCAN_APP_ID::$app_id"
+
+    - name: prepare and queue scan
+      env:
+        ASOC_KEY: ${{ secrets.asoc-key }}
+        ASOC_SECRET: ${{ secrets.asoc-secret }}
+      run: |
+        echo "$PATH"
+        echo "logging-in to AppScan..."
+        appscan.sh api_login -u ${ASOC_KEY} -P ${ASOC_SECRET} -persist
+        echo "preparing scan result..."
+        appscan.sh prepare -n appscan-result.irx
+        echo "uploading scan result to AppScan... (app_id: ${{ steps.appscan-app-id.outputs.APPSCAN_APP_ID }})"
+        appscan.sh queue_analysis -a "${{ steps.appscan-app-id.outputs.APPSCAN_APP_ID }}" -f appscan-result.irx -n "${{ github.sha }}"
