@@ -35,7 +35,7 @@ jobs:
         git clone "${{ format('git@github.ibm.com:{0}/{1}.git', 'skills-network-mirror', inputs.repo_name) }}"
         cd "${{ inputs.repo_name }}"
 
-        echo -n ewogICJzZXR0aW5nc0luaGVyaXRlZEZyb20iOiAid2hpdGVzb3VyY2UtY29uZmlnL3doaXRlc291cmNlLWNvbmZpZ0BtYXN0ZXIiLAogICJyZW1lZGlhdGVTZXR0aW5ncyI6IHsKICAgICJlbmFibGVSZW5vdmF0ZSI6IHRydWUsCiAgICAiZXh0ZW5kcyI6IFsiY29uZmlnOmJhc2UiLCAiOmRpc2FibGVEZXZEZXBlbmRlbmNpZXMiXQogIH0KfQo== | base64 -w 0 -d > .whitesource
+        echo "ewogICJzZXR0aW5nc0luaGVyaXRlZEZyb20iOiAid2hpdGVzb3VyY2UtY29uZmlnL3doaXRlc291cmNlLWNvbmZpZ0BtYXN0ZXIiLAogICJyZW1lZGlhdGVTZXR0aW5ncyI6IHsKICAgICJlbmFibGVSZW5vdmF0ZSI6IHRydWUsCiAgICAiZXh0ZW5kcyI6IFsiY29uZmlnOmJhc2UiLCAiOmRpc2FibGVEZXZEZXBlbmRlbmNpZXMiXQogIH0KfQo==" | base64 -w 0 -di > .whitesource
         git add .whitesource
         git commit -m "use GHE .whitesource"
         git push
