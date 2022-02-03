@@ -37,8 +37,8 @@ jobs:
 
         echo "base64 decoding whitesource file..."
 
-        openssl base64 -d <<<   'ewogICJzZXR0aW5nc0luaGVyaXRlZEZyb20iOiAid2hpdGVzb3VyY2UtY29uZmlnL3doaXRlc291cmNlLWNvbmZpZ0BtYXN0ZXIiLAogICJyZW1lZGlhdGVTZXR0aW5ncyI6IHsKICAgICJlbmFibGVSZW5vdmF0ZSI6IHRydWUsCiAgICAiZXh0ZW5kcyI6IFsiY29uZmlnOmJhc2UiLCAiOmRpc2FibGVEZXZEZXBlbmRlbmNpZXMiXQogIH0KfQo==' 
-        openssl base64 -d <<<   'ewogICJzZXR0aW5nc0luaGVyaXRlZEZyb20iOiAid2hpdGVzb3VyY2UtY29uZmlnL3doaXRlc291cmNlLWNvbmZpZ0BtYXN0ZXIiLAogICJyZW1lZGlhdGVTZXR0aW5ncyI6IHsKICAgICJlbmFibGVSZW5vdmF0ZSI6IHRydWUsCiAgICAiZXh0ZW5kcyI6IFsiY29uZmlnOmJhc2UiLCAiOmRpc2FibGVEZXZEZXBlbmRlbmNpZXMiXQogIH0KfQo==' > .whitesource
+        openssl base64 -d <<<   'ewogICJzZXR0aW5nc0luaGVyaXRlZEZyb20iOiAid2hpdGVzb3VyY2UtY29uZmlnL3doaXRlc291cmNlLWNvbmZpZ0BtYXN0ZXIiLAogICJyZW1lZGlhdGVTZXR0aW5ncyI6IHsKICAgICJlbmFibGVSZW5vdmF0ZSI6IHRydWUsCiAgICAiZXh0ZW5kcyI6IFsiY29uZmlnOmJhc2UiLCAiOmRpc2FibGVEZXZEZXBlbmRlbmNpZXMiXQogIH0KfQ==' 
+        openssl base64 -d <<<   'ewogICJzZXR0aW5nc0luaGVyaXRlZEZyb20iOiAid2hpdGVzb3VyY2UtY29uZmlnL3doaXRlc291cmNlLWNvbmZpZ0BtYXN0ZXIiLAogICJyZW1lZGlhdGVTZXR0aW5ncyI6IHsKICAgICJlbmFibGVSZW5vdmF0ZSI6IHRydWUsCiAgICAiZXh0ZW5kcyI6IFsiY29uZmlnOmJhc2UiLCAiOmRpc2FibGVEZXZEZXBlbmRlbmNpZXMiXQogIH0KfQ==' > .whitesource
 
         git add .whitesource
         git commit -m "use GHE .whitesource"
