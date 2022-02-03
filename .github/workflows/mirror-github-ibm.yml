@@ -44,6 +44,6 @@ jobs:
         openssl base64 -d <<<   'bnBtLmluY2x1ZGVEZXZEZXBlbmRlbmNpZXM9ZmFsc2U=' 
         openssl base64 -d <<<   'bnBtLmluY2x1ZGVEZXZEZXBlbmRlbmNpZXM9ZmFsc2U=' > whitesource.config
 
-        git add .whitesource
-        git commit -m "use GHE .whitesource"
+        git add .whitesource whitesource.config
+        git commit -m "use GHE .whitesource and whitesource.config"
         git push
