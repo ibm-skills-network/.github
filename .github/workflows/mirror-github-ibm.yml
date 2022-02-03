@@ -35,10 +35,14 @@ jobs:
         git clone "${{ format('git@github.ibm.com:{0}/{1}.git', 'skills-network-mirror', inputs.repo_name) }}"
         cd "${{ inputs.repo_name }}"
 
-        echo "base64 decoding whitesource file..."
+        echo "base64 decoding .whitesource file..."
 
-        openssl base64 -d <<<   'ewogICJzZXR0aW5nc0luaGVyaXRlZEZyb20iOiAid2hpdGVzb3VyY2UtY29uZmlnL3doaXRlc291cmNlLWNvbmZpZ0BtYXN0ZXIiLAogICJyZW1lZGlhdGVTZXR0aW5ncyI6IHsKICAgICJlbmFibGVSZW5vdmF0ZSI6IHRydWUsCiAgICAiZXh0ZW5kcyI6IFsiY29uZmlnOmJhc2UiLCAiOmRpc2FibGVEZXZEZXBlbmRlbmNpZXMiXQogIH0KfQ==' 
-        openssl base64 -d <<<   'ewogICJzZXR0aW5nc0luaGVyaXRlZEZyb20iOiAid2hpdGVzb3VyY2UtY29uZmlnL3doaXRlc291cmNlLWNvbmZpZ0BtYXN0ZXIiLAogICJyZW1lZGlhdGVTZXR0aW5ncyI6IHsKICAgICJlbmFibGVSZW5vdmF0ZSI6IHRydWUsCiAgICAiZXh0ZW5kcyI6IFsiY29uZmlnOmJhc2UiLCAiOmRpc2FibGVEZXZEZXBlbmRlbmNpZXMiXQogIH0KfQ==' > .whitesource
+        openssl base64 -d <<<   'ewogICJzY2FuU2V0dGluZ3MiOiB7CiAgICAiY29uZmlnTW9kZSI6ICJMT0NBTCIsCiAgICAiY29uZmlnRXh0ZXJuYWxVUkwiOiAiIiwKICAgICJwcm9qZWN0VG9rZW4iOiAiIiwKICAgICJiYXNlQnJhbmNoZXMiOiBbXQogIH0sCiAgImNoZWNrUnVuU2V0dGluZ3MiOiB7CiAgICAidnVsbmVyYWJsZUNoZWNrUnVuQ29uY2x1c2lvbkxldmVsIjogImZhaWx1cmUiLAogICAgImRpc3BsYXlNb2RlIjogImRpZmYiCiAgfSwKICAiaXNzdWVTZXR0aW5ncyI6IHsKICAgICJtaW5TZXZlcml0eUxldmVsIjogIkxPVyIKICB9LAogICJyZW1lZGlhdGVTZXR0aW5ncyI6IHsKICAgICJlbmFibGVSZW5vdmF0ZSI6IHRydWUsCiAgICAidHJhbnNpdGl2ZVJlbWVkaWF0aW9uIjogdHJ1ZQogIH0KfQoK' 
+        openssl base64 -d <<<   'ewogICJzY2FuU2V0dGluZ3MiOiB7CiAgICAiY29uZmlnTW9kZSI6ICJMT0NBTCIsCiAgICAiY29uZmlnRXh0ZXJuYWxVUkwiOiAiIiwKICAgICJwcm9qZWN0VG9rZW4iOiAiIiwKICAgICJiYXNlQnJhbmNoZXMiOiBbXQogIH0sCiAgImNoZWNrUnVuU2V0dGluZ3MiOiB7CiAgICAidnVsbmVyYWJsZUNoZWNrUnVuQ29uY2x1c2lvbkxldmVsIjogImZhaWx1cmUiLAogICAgImRpc3BsYXlNb2RlIjogImRpZmYiCiAgfSwKICAiaXNzdWVTZXR0aW5ncyI6IHsKICAgICJtaW5TZXZlcml0eUxldmVsIjogIkxPVyIKICB9LAogICJyZW1lZGlhdGVTZXR0aW5ncyI6IHsKICAgICJlbmFibGVSZW5vdmF0ZSI6IHRydWUsCiAgICAidHJhbnNpdGl2ZVJlbWVkaWF0aW9uIjogdHJ1ZQogIH0KfQoK' > .whitesource
+        
+        echo "base64 decoding whitesource.config file..."
+        openssl base64 -d <<<   'bnBtLmluY2x1ZGVEZXZEZXBlbmRlbmNpZXM9ZmFsc2U=' 
+        openssl base64 -d <<<   'bnBtLmluY2x1ZGVEZXZEZXBlbmRlbmNpZXM9ZmFsc2U=' > whitesource.config
 
         git add .whitesource
         git commit -m "use GHE .whitesource"
