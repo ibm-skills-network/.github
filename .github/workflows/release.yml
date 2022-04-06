@@ -52,8 +52,11 @@ jobs:
           # so you don't need to configure them on your own
           username: ${{ secrets.ICR_USERNAME }}
           password: ${{ secrets.ICR_PASSWORD }}
-      - uses: actions-ecosystem/action-get-latest-tag@v1
-        id: latest-tag
+      - uses: pozetroninc/github-action-get-latest-release@master
+        id: latest-release
+        with:
+          repository: ${{ github.repository }}
+          excludes: prerelease, draft
         if: ${{ github.event_name == 'schedule' }}
       - name: Docker meta
         id: meta
@@ -66,7 +69,7 @@ jobs:
           #   - Manual tag (trigger from Github UI)
           tags: |
             type=semver,pattern={{version}}
-            type=schedule,pattern=${{ steps.latest-tag.outputs.tag }}-{{date 'YYYYMMDD'}}
+            type=schedule,pattern=${{ steps.latest-release.outputs.release }}-{{date 'YYYYMMDD'}}
             type=raw,value=manual,suffix=${{ github.event.inputs.suffix }},enable=${{ github.event_name == 'workflow_dispatch' }}
 
       - run: echo "@ibm-skills-network:registry=https://npm.pkg.github.com" > .npmrc
