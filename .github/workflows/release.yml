@@ -33,7 +33,17 @@ jobs:
     name: docker image
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: pozetroninc/github-action-get-latest-release@master
+        id: latest-release
+        with:
+          repository: ${{ github.repository }}
+          excludes: prerelease, draft
+        if: ${{ github.event_name == 'schedule' }}
+      - uses: actions/checkout@v3
+        with:
+          # If a schedules (nightly) build use latest release tag
+          # Otherwise use referenced/default branch/tag
+          ref: ${{ (github.event_name == 'schedule' && steps.latest-release.outputs.release) || "") }}
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
       - name: Login to US ICR
@@ -52,12 +62,6 @@ jobs:
           # so you don't need to configure them on your own
           username: ${{ secrets.ICR_USERNAME }}
           password: ${{ secrets.ICR_PASSWORD }}
-      - uses: pozetroninc/github-action-get-latest-release@master
-        id: latest-release
-        with:
-          repository: ${{ github.repository }}
-          excludes: prerelease, draft
-        if: ${{ github.event_name == 'schedule' }}
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v3
