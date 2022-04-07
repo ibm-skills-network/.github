@@ -1,0 +1,102 @@
+on: 
+  workflow_call:
+    inputs:
+      image:
+        description: 'Full docker image location. e.g. us.icr.io/skills-network-portals/curator'
+        required: true
+        type: string
+      docker_target:
+        description: 'Build target for multi-stage docker build'
+        default: 'monkey-patched'
+        required: false
+        type: string
+      docker_context:
+        description: 'Build context directory'
+        default: '.'
+        required: false
+        type: string
+      push:
+        description: 'Should the docker image be pushed to ICR'
+        default: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || startsWith(github.ref, 'refs/tags/') }}
+        required: false
+        type: boolean
+    secrets:
+      ICR_USERNAME:
+        required: true
+      ICR_PASSWORD:
+        required: true
+      NPM_TOKEN:
+        required: true
+
+jobs:
+  build:
+    name: docker image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get latest release tag
+        id: latest-release
+        uses: InsonusK/get-latest-release@v1.0.1
+        with:
+          myToken: ${{ github.token }}
+          exclude_types: "draft|prerelease"
+          view_top: 1
+        if: ${{ github.event_name == 'schedule' }}
+
+      # If this is a scheduled (nightly) build use latest release tag
+      # Otherwise use referenced/default branch/tag
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ steps.latest-release.outputs.tag_name }}
+        if: ${{ github.event_name == 'schedule' }}
+      - uses: actions/checkout@v3
+        if: ${{ github.event_name != 'schedule' }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      - name: Login to US ICR
+        uses: docker/login-action@v1
+        with:
+          registry: us.icr.io
+          # These are organization-wide secrets,
+          # so you don't need to configure them on your own
+          username: ${{ secrets.ICR_USERNAME }}
+          password: ${{ secrets.ICR_PASSWORD }}
+      - name: Login to Global ICR
+        uses: docker/login-action@v1
+        with:
+          registry: icr.io
+          # These are organization-wide secrets,
+          # so you don't need to configure them on your own
+          username: ${{ secrets.ICR_USERNAME }}
+          password: ${{ secrets.ICR_PASSWORD }}
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v3
+        with:
+          images: ${{ inputs.image }}
+          # Info: https://github.com/docker/metadata-action#tags-input
+          #   - Tag for semantically versioned releases
+          #   - Nightly tag ('<latest tag>-YYYYMMDD')
+          #   - Manual tag (trigger from Github UI)
+          tags: |
+            type=semver,pattern={{version}}
+            type=schedule,pattern=${{ steps.latest-release.outputs.tag_name }}-{{date 'YYYYMMDD'}}
+            type=raw,value=manual,suffix=${{ github.event.inputs.suffix }},enable=${{ github.event_name == 'workflow_dispatch' }}
+
+      - name: Setup npm registries
+        run:  |
+          echo "@ibm-skills-network:registry=https://npm.pkg.github.com" > .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.NPM_TOKEN }}" >> .npmrc
+
+      - name: Build and push
+        uses: docker/build-push-action@v2
+        with:
+          # If you Dockerfile is not present in the root directory
+          # change it to the correct subdirectory name
+          context: ${{ inputs.docker_context }}
+          target: ${{ inputs.docker_target }}
+          push: ${{ inputs.push }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
