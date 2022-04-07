@@ -33,18 +33,24 @@ jobs:
     name: docker image
     runs-on: ubuntu-latest
     steps:
-      - uses: pozetroninc/github-action-get-latest-release@master
-        id: latest-release
+      # - uses: pozetroninc/github-action-get-latest-release@master
+      #   id: latest-release
+      #   with:
+      #     repository: ${{ github.repository }}
+      #     excludes: prerelease, draft
+      #   if: ${{ github.event_name == 'schedule' }}
+      - id: latest-release
+        uses: InsonusK/get-latest-release@v1.0.1
         with:
-          repository: ${{ github.repository }}
-          excludes: prerelease, draft
-        if: ${{ github.event_name == 'schedule' }}
+          myToken: ${{ github.token }}
+          exclude_types: "draft|prerelease"
+          view_top: 1
 
       # If this is a scheduled (nightly) build use latest release tag
       # Otherwise use referenced/default branch/tag
       - uses: actions/checkout@v3
         with:
-          ref: ${{ steps.latest-release.outputs.release }}
+          ref: ${{ steps.latest-release.outputs.tag_name }}
         if: ${{ github.event_name == 'schedule' }}
       - uses: actions/checkout@v3
         if: ${{ github.event_name != 'schedule' }}
@@ -78,7 +84,7 @@ jobs:
           #   - Manual tag (trigger from Github UI)
           tags: |
             type=semver,pattern={{version}}
-            type=schedule,pattern=${{ steps.latest-release.outputs.release }}-{{date 'YYYYMMDD'}}
+            type=schedule,pattern=${{ steps.latest-release.outputs.tag_name }}-{{date 'YYYYMMDD'}}
             type=raw,value=manual,suffix=${{ github.event.inputs.suffix }},enable=${{ github.event_name == 'workflow_dispatch' }}
 
       - run: echo "@ibm-skills-network:registry=https://npm.pkg.github.com" > .npmrc
