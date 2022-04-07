@@ -33,18 +33,14 @@ jobs:
     name: docker image
     runs-on: ubuntu-latest
     steps:
-      # - uses: pozetroninc/github-action-get-latest-release@master
-      #   id: latest-release
-      #   with:
-      #     repository: ${{ github.repository }}
-      #     excludes: prerelease, draft
-      #   if: ${{ github.event_name == 'schedule' }}
-      - id: latest-release
+      - name: Get latest release tag
+        id: latest-release
         uses: InsonusK/get-latest-release@v1.0.1
         with:
           myToken: ${{ github.token }}
           exclude_types: "draft|prerelease"
           view_top: 1
+        if: ${{ github.event_name == 'schedule' }}
 
       # If this is a scheduled (nightly) build use latest release tag
       # Otherwise use referenced/default branch/tag
@@ -73,7 +69,7 @@ jobs:
           # so you don't need to configure them on your own
           username: ${{ secrets.ICR_USERNAME }}
           password: ${{ secrets.ICR_PASSWORD }}
-      - name: Docker meta
+      - name: Docker metadata
         id: meta
         uses: docker/metadata-action@v3
         with:
@@ -87,8 +83,11 @@ jobs:
             type=schedule,pattern=${{ steps.latest-release.outputs.tag_name }}-{{date 'YYYYMMDD'}}
             type=raw,value=manual,suffix=${{ github.event.inputs.suffix }},enable=${{ github.event_name == 'workflow_dispatch' }}
 
-      - run: echo "@ibm-skills-network:registry=https://npm.pkg.github.com" > .npmrc
-      - run: echo "//npm.pkg.github.com/:_authToken=${{ secrets.NPM_TOKEN }}" >> .npmrc
+      - name: Setup npm registries
+        run:  |
+          echo "@ibm-skills-network:registry=https://npm.pkg.github.com" > .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.NPM_TOKEN }}" >> .npmrc
+
       - name: Build and push
         uses: docker/build-push-action@v2
         with:
