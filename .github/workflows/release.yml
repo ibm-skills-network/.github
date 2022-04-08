@@ -20,6 +20,9 @@ on:
         default: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || startsWith(github.ref, 'refs/tags/') }}
         required: false
         type: boolean
+      docker_secrets:
+        description: "List of secrets to expose to the build (e.g., key=string, GIT_AUTH_TOKEN=mytoken)"
+        required: false
     secrets:
       ICR_USERNAME:
         required: true
@@ -100,3 +103,4 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          secrets: ${{ secrets.docker_secrets }}
