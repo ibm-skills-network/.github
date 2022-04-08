@@ -34,7 +34,7 @@ on:
       OBAN_KEY_FINGERPRINT:
         required: false
       OBAN_LICENSE_KEY:
-        required: true
+        required: false
         
 jobs:
   build:
