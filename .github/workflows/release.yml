@@ -49,11 +49,23 @@ jobs:
           token: ${{ github.token }}
         if: ${{ github.event_name == 'schedule' }}
 
+        # base release is the release without any security patch suffix
+        # base release of x.y.z is x.y.z
+        # base release is x.y.z-YYYYMMDD is x.y.z
+      - name: Get base release tag
+        id: base-release
+        run:  |
+          echo "::set-output name=base-release::$(echo '${{ steps.latest-release.outputs.tag_name }}' | sed -r 's/(-[0-9]{8})$//')"
+      - name: print release tag
+        run: |
+          echo "${{ steps.base-release.outputs.base-release }}"
+        if: ${{ github.event_name == 'schedule' }}
+
       # If this is a scheduled (nightly) build use latest release tag
       # Otherwise use referenced/default branch/tag
       - uses: actions/checkout@v3
         with:
-          ref: ${{ steps.latest-release.outputs.tag_name }}
+          ref: ${{ steps.latest-release.outputs.latest-release }}
         if: ${{ github.event_name == 'schedule' }}
       - uses: actions/checkout@v3
         if: ${{ github.event_name != 'schedule' }}
@@ -87,7 +99,7 @@ jobs:
           #   - Manual tag (trigger from Github UI)
           tags: |
             type=semver,pattern={{version}}
-            type=schedule,pattern=${{ steps.latest-release.outputs.tag_name }}-{{date 'YYYYMMDD'}}
+            type=schedule,pattern=${{ steps.base-release.outputs.base-release }}-{{date 'YYYYMMDD'}}
             type=raw,value=manual,suffix=${{ github.event.inputs.suffix }},enable=${{ github.event_name == 'workflow_dispatch' }}
 
       - name: Setup npm registries
