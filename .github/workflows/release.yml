@@ -1,4 +1,4 @@
-on: 
+on:
   workflow_call:
     inputs:
       image:
@@ -35,7 +35,7 @@ on:
         required: false
       OBAN_LICENSE_KEY:
         required: false
-        
+
 jobs:
   build:
     name: docker image
@@ -43,11 +43,10 @@ jobs:
     steps:
       - name: Get latest release tag
         id: latest-release
-        uses: InsonusK/get-latest-release@v1.0.1
+        uses: fangqiuming/latest-release-version@v1.1.1
         with:
-          myToken: ${{ github.token }}
-          exclude_types: "draft|prerelease"
-          view_top: 1
+          repository: ${{ github.repository }}
+          token: ${{ github.token }}
         if: ${{ github.event_name == 'schedule' }}
 
       # If this is a scheduled (nightly) build use latest release tag
