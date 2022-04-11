@@ -15,6 +15,11 @@ on:
         default: '.'
         required: false
         type: string
+      docker_file:
+        description: 'Path to the Dockerfile'
+        default: ''
+        required: false
+        type: string
       docker_secrets:
         description: 'List of secrets to expose to the build (e.g., key=string, GIT_AUTH_TOKEN=mytoken)'
         required: false
@@ -113,6 +118,7 @@ jobs:
           # If you Dockerfile is not present in the root directory
           # change it to the correct subdirectory name
           context: ${{ inputs.docker_context }}
+          file: ${{ inputs.docker_file }}
           target: ${{ inputs.docker_target }}
           push: ${{ inputs.push }}
           tags: ${{ steps.meta.outputs.tags }}
