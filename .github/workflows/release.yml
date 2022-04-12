@@ -15,6 +15,10 @@ on:
         default: '.'
         required: false
         type: string
+      docker_build_args:
+        description: 'additional docker build arguments'
+        required: false
+        type: string
       docker_file:
         description: 'Path to the Dockerfile'
         default: ''
@@ -118,6 +122,7 @@ jobs:
           # If you Dockerfile is not present in the root directory
           # change it to the correct subdirectory name
           context: ${{ inputs.docker_context }}
+          build-args: ${{ inputs.docker_build_args }}
           file: ${{ inputs.docker_file }}
           target: ${{ inputs.docker_target }}
           push: ${{ inputs.push }}
