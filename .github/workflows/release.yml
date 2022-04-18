@@ -119,8 +119,12 @@ jobs:
             echo "::set-output name=cache-from::"
             echo "::set-output name=cache-to::"
           else
-            echo "::set-output name=cache-from::type=gha"
-            echo "::set-output name=cache-to::type=gha,mode=max"
+            # disable caching on all days until we confirm our "Requires Manual Intervention"
+            # issues aren't due to caching issues
+            echo "::set-output name=cache-from::"
+            echo "::set-output name=cache-to::"
+            # echo "::set-output name=cache-from::type=gha"
+            # echo "::set-output name=cache-to::type=gha,mode=max"
           fi
 
       - name: Build and push
