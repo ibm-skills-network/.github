@@ -112,6 +112,21 @@ jobs:
           echo "@ibm-skills-network:registry=https://npm.pkg.github.com" > .npmrc
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.NPM_TOKEN }}" >> .npmrc
 
+      - name: Should we cache
+        id: should-cache
+        run:  |
+          if [[ $(date +%a) == 'Sun' ]]; then
+            echo "::set-output name=cache-from::"
+            echo "::set-output name=cache-to::"
+          else
+            # disable caching on all days until we confirm our "Requires Manual Intervention"
+            # issues aren't due to caching issues
+            echo "::set-output name=cache-from::"
+            echo "::set-output name=cache-to::"
+            # echo "::set-output name=cache-from::type=gha"
+            # echo "::set-output name=cache-to::type=gha,mode=max"
+          fi
+
       - name: Build and push
         uses: docker/build-push-action@v2
         with:
@@ -123,6 +138,6 @@ jobs:
           push: ${{ inputs.push }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: ${{ steps.should-cache.outputs.cache-from }}
+          cache-to: ${{ steps.should-cache.outputs.cache-to }}
           secrets: ${{ inputs.docker_secrets }}
