@@ -130,7 +130,7 @@ jobs:
           fi
 
       - name: Build and push
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v3.2.0
         with:
           # If you Dockerfile is not present in the root directory
           # change it to the correct subdirectory name
@@ -143,3 +143,4 @@ jobs:
           cache-from: ${{ steps.should-cache.outputs.cache-from }}
           cache-to: ${{ steps.should-cache.outputs.cache-to }}
           secrets: ${{ inputs.docker_secrets }}
+          platforms: linux/amd64,linux/arm64
