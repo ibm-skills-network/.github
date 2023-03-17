@@ -129,6 +129,7 @@ jobs:
 
       - name: Build and push
         uses: docker/build-push-action@v2
+        if: ${{ !secrets.OBAN_KEY_FINGERPRINT }}
         with:
           # If you Dockerfile is not present in the root directory
           # change it to the correct subdirectory name
@@ -141,3 +142,23 @@ jobs:
           cache-from: ${{ steps.should-cache.outputs.cache-from }}
           cache-to: ${{ steps.should-cache.outputs.cache-to }}
           secrets: ${{ inputs.docker_secrets }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v2
+        if: ${{ secrets.OBAN_KEY_FINGERPRINT }}
+        
+        with:
+          # If you Dockerfile is not present in the root directory
+          # change it to the correct subdirectory name
+          context: ${{ inputs.docker_context }}
+          file: ${{ inputs.docker_file }}
+          target: ${{ inputs.docker_target }}
+          push: ${{ inputs.push }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: ${{ steps.should-cache.outputs.cache-from }}
+          cache-to: ${{ steps.should-cache.outputs.cache-to }}
+          secrets: |
+            ${{ inputs.docker_secrets }}
+            OBAN_KEY_FINGERPRINT=${{ secrets.OBAN_KEY_FINGERPRINT }}
+            OBAN_LICENSE_KEY=${{ secrets.OBAN_LICENSE_KEY }}
