@@ -130,7 +130,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v2
         with:
-          # If you Dockerfile is not present in the root directory
+          # If your Dockerfile is not present in the root directory
           # change it to the correct subdirectory name
           context: ${{ inputs.docker_context }}
           file: ${{ inputs.docker_file }}
@@ -140,4 +140,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: ${{ steps.should-cache.outputs.cache-from }}
           cache-to: ${{ steps.should-cache.outputs.cache-to }}
-          secrets: ${{ inputs.docker_secrets }}
+          secrets: |
+            "oban_key_fingerprint=${{ secrets.OBAN_KEY_FINGERPRINT }}"
+            "oban_license_key=${{ secrets.OBAN_LICENSE_KEY }}"
+            ${{ inputs.docker_secrets }}
