@@ -77,6 +77,8 @@ jobs:
           ref: ${{ steps.latest-release.outputs.latest-release }}
         if: ${{ github.event_name == 'schedule' }}
       - uses: actions/checkout@v3
+        with:
+          persist-credentials: false
         if: ${{ github.event_name != 'schedule' }}
       - name: Initial Script
         run: ${{ inputs.init_script }}
