@@ -5,10 +5,6 @@ on:
         description: 'Full docker image location. e.g. us.icr.io/skills-network-portals/curator'
         required: true
         type: string
-      init_script:
-        description: 'Provide path to a script to run before this workflow.'
-        required: false
-        type: string
       docker_target:
         description: 'Build target for multi-stage docker build'
         default: 'monkey-patched'
@@ -83,9 +79,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           submodules: recursive
         if: ${{ github.event_name != 'schedule' }}
-      - name: Initial Script
-        run: ${{ inputs.init_script }}
-        if: ${{ inputs.init_script }}
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
       - name: Login to US ICR
