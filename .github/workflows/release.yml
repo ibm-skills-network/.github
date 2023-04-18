@@ -34,6 +34,8 @@ on:
         required: true
       ICR_PASSWORD:
         required: true
+      GH_SECRET:
+        required: false
       NPM_TOKEN:
         required: true
       OBAN_KEY_FINGERPRINT:
