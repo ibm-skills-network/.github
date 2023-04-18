@@ -70,9 +70,14 @@ jobs:
       # Otherwise use referenced/default branch/tag
       - uses: actions/checkout@v3
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          submodules: recursive
           ref: ${{ steps.latest-release.outputs.latest-release }}
         if: ${{ github.event_name == 'schedule' }}
       - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          submodules: recursive
         if: ${{ github.event_name != 'schedule' }}
 
       - name: Set up Docker Buildx
