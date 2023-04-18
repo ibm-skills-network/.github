@@ -68,9 +68,6 @@ jobs:
 
       # If this is a scheduled (nightly) build use latest release tag
       # Otherwise use referenced/default branch/tag
-      - run: | 
-        echo "${{ secrets.GH_TOKEN }}"
-        echo "${{ secrets.GITHUB_TOKEN }}"
       - uses: actions/checkout@v3
         with:
           token: ${{ secrets.GH_TOKEN }}
