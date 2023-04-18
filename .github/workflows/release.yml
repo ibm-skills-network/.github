@@ -34,7 +34,7 @@ on:
         required: true
       ICR_PASSWORD:
         required: true
-      GH_SECRET:
+      GH_TOKEN:
         required: false
       NPM_TOKEN:
         required: true
