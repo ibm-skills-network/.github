@@ -34,6 +34,8 @@ on:
         required: true
       ICR_PASSWORD:
         required: true
+      GH_TOKEN:
+        required: false
       NPM_TOKEN:
         required: true
       OBAN_KEY_FINGERPRINT:
@@ -70,9 +72,14 @@ jobs:
       # Otherwise use referenced/default branch/tag
       - uses: actions/checkout@v3
         with:
+          token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          submodules: recursive
           ref: ${{ steps.latest-release.outputs.latest-release }}
         if: ${{ github.event_name == 'schedule' }}
       - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          submodules: recursive
         if: ${{ github.event_name != 'schedule' }}
 
       - name: Set up Docker Buildx
