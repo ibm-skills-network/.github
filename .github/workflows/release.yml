@@ -52,6 +52,10 @@ on:
         required: false
       OBAN_LICENSE_KEY:
         required: false
+      TRAVIS_API_TOKEN:
+        required: true
+      CONTAINER_IMAGE_SCAN_RESULT_COS_API_KEY:
+        required: true
 
 jobs:
   build:
