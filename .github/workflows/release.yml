@@ -162,7 +162,7 @@ jobs:
 
       - name: Scan image
         if: ${{ inputs.scan_image_enabled }}
-        uses: ibm-skills-network/action-scan-container-image
+        uses: ibm-skills-network/action-scan-container-image@main
         with:
           image: ${{ inputs.image }}:scan-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           travis_api_token: ${{ secrets.TRAVIS_API_TOKEN }}
