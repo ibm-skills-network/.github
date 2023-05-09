@@ -153,7 +153,7 @@ jobs:
           file: ${{ inputs.docker_file }}
           target: ${{ inputs.docker_target }}
           push: ${{ inputs.push }}
-          tags: scan-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          tags: ${{ inputs.image }}:scan-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: ${{ steps.should-cache.outputs.cache-from }}
           cache-to: ${{ steps.should-cache.outputs.cache-to }}
