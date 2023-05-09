@@ -40,21 +40,7 @@ on:
         required: false
         type: boolean
     secrets:
-      ICR_USERNAME:
-        required: true
-      ICR_PASSWORD:
-        required: true
       GH_TOKEN:
-        required: false
-      NPM_TOKEN:
-        required: true
-      OBAN_KEY_FINGERPRINT:
-        required: false
-      OBAN_LICENSE_KEY:
-        required: false
-      TRAVIS_API_TOKEN:
-        required: false
-      CONTAINER_IMAGE_SCAN_RESULT_COS_API_KEY:
         required: false
 
 jobs:
