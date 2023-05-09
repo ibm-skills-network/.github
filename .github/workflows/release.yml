@@ -42,6 +42,10 @@ on:
     secrets:
       GH_TOKEN:
         required: false
+      OBAN_KEY_FINGERPRINT:
+        required: false
+      OBAN_LICENSE_KEY:
+        required: false
 
 jobs:
   build:
