@@ -9,7 +9,7 @@ on:
         description: 'Set to true to scan your container image for vulnerabilities before pushing it to ICR'
         required: true
         type: boolean
-        default: false
+        default: true
       scan_fail_if_overdue:
         description: 'Set to true to prevent images with overdue vulnerabilities from being pushed to ICR'
         required: true
