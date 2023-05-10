@@ -7,12 +7,12 @@ on:
         type: string
       scan_image_enabled:
         description: 'Set to true to scan your container image for vulnerabilities before pushing it to ICR'
-        required: true
+        required: false
         type: boolean
         default: true
       scan_fail_if_overdue:
         description: 'Set to true to prevent images with overdue vulnerabilities from being pushed to ICR'
-        required: true
+        required: false
         type: boolean
         default: true
       docker_target:
