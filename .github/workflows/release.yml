@@ -101,7 +101,8 @@ jobs:
         id: meta
         uses: docker/metadata-action@v4
         with:
-          images: ${{ inputs.image }}
+          images: |
+            ${{ inputs.image }}
           # Info: https://github.com/docker/metadata-action#tags-input
           #   - Tag for semantically versioned releases
           #   - Nightly tag ('<latest tag>-YYYYMMDD')
@@ -139,7 +140,7 @@ jobs:
           context: ${{ inputs.docker_context }}
           file: ${{ inputs.docker_file }}
           target: ${{ inputs.docker_target }}
-          push: ${{ inputs.push }}
+          push: true
           tags: ${{ inputs.image }}:scan-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: ${{ steps.should-cache.outputs.cache-from }}
