@@ -14,7 +14,7 @@ on:
         description: 'Set to true to prevent images with overdue vulnerabilities from being pushed to ICR'
         required: false
         type: boolean
-        default: false
+        default: true
       docker_target:
         description: 'Build target for multi-stage docker build'
         default: 'monkey-patched'
