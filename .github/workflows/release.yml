@@ -15,12 +15,6 @@ on:
         required: false
         type: boolean
         default: true
-      scan_travis_api_key:
-        required: false
-        type: string
-      scan_bucket_api_key:
-        required: false
-        type: string
       docker_target:
         description: 'Build target for multi-stage docker build'
         default: 'monkey-patched'
@@ -57,6 +51,10 @@ on:
       ICR_PASSWORD:
         required: false
       NPM_TOKEN:
+        required: false
+      TRAVIS_API_TOKEN:
+        required: false
+      CONTAINER_IMAGE_SCAN_RESULT_COS_API_KEY:
         required: false
 
 jobs:
@@ -167,8 +165,8 @@ jobs:
         uses: ibm-skills-network/action-scan-container-image@main
         with:
           image: ${{ inputs.image }}:scan-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
-          travis_api_token: ${{ secrets.TRAVIS_API_TOKEN || inputs.scan_travis_api_key }}
-          image_scan_result_cos_api_token: ${{ secrets.CONTAINER_IMAGE_SCAN_RESULT_COS_API_KEY || inputs.scan_bucket_api_key }}
+          travis_api_token: ${{ secrets.TRAVIS_API_TOKEN }}
+          image_scan_result_cos_api_token: ${{ secrets.CONTAINER_IMAGE_SCAN_RESULT_COS_API_KEY }}
           fail_if_overdue: ${{ inputs.scan_fail_if_overdue }}
 
       - name: Build and push
