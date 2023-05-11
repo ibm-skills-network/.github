@@ -5,6 +5,16 @@ on:
         description: 'Full docker image location. e.g. us.icr.io/skills-network-portals/curator'
         required: true
         type: string
+      scan_image_enabled:
+        description: 'Set to true to scan your container image for vulnerabilities before pushing it to ICR'
+        required: false
+        type: boolean
+        default: true
+      scan_fail_if_overdue:
+        description: 'Set to true to prevent images with overdue vulnerabilities from being pushed to ICR'
+        required: false
+        type: boolean
+        default: false
       docker_target:
         description: 'Build target for multi-stage docker build'
         default: 'monkey-patched'
@@ -30,17 +40,21 @@ on:
         required: false
         type: boolean
     secrets:
-      ICR_USERNAME:
-        required: true
-      ICR_PASSWORD:
-        required: true
       GH_TOKEN:
         required: false
-      NPM_TOKEN:
-        required: true
       OBAN_KEY_FINGERPRINT:
         required: false
       OBAN_LICENSE_KEY:
+        required: false
+      ICR_USERNAME:
+        required: false
+      ICR_PASSWORD:
+        required: false
+      NPM_TOKEN:
+        required: false
+      TRAVIS_API_TOKEN:
+        required: false
+      CONTAINER_IMAGE_SCAN_RESULT_COS_API_KEY:
         required: false
 
 jobs:
@@ -62,7 +76,8 @@ jobs:
       - name: Get base release tag
         id: base-release
         run:  |
-          echo "::set-output name=base-release::$(echo '${{ steps.latest-release.outputs.tag_name }}' | sed -r 's/(-[0-9]{8})$//')"
+          echo "base-release=$(echo '${{ steps.latest-release.outputs.tag_name }}' | sed -r 's/(-[0-9]{8})$//')" >> $GITHUB_OUTPUT
+
       - name: print release tag
         run: |
           echo "${{ steps.base-release.outputs.base-release }}"
@@ -83,17 +98,9 @@ jobs:
         if: ${{ github.event_name != 'schedule' }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-      - name: Login to US ICR
-        uses: docker/login-action@v1
-        with:
-          registry: us.icr.io
-          # These are organization-wide secrets,
-          # so you don't need to configure them on your own
-          username: ${{ secrets.ICR_USERNAME }}
-          password: ${{ secrets.ICR_PASSWORD }}
+        uses: docker/setup-buildx-action@v2
       - name: Login to Global ICR
-        uses: docker/login-action@v1
+        uses: docker/login-action@v2
         with:
           registry: icr.io
           # These are organization-wide secrets,
@@ -102,9 +109,10 @@ jobs:
           password: ${{ secrets.ICR_PASSWORD }}
       - name: Docker metadata
         id: meta
-        uses: docker/metadata-action@v3
+        uses: docker/metadata-action@v4
         with:
-          images: ${{ inputs.image }}
+          images: |
+            ${{ inputs.image }}
           # Info: https://github.com/docker/metadata-action#tags-input
           #   - Tag for semantically versioned releases
           #   - Nightly tag ('<latest tag>-YYYYMMDD')
@@ -123,19 +131,47 @@ jobs:
         id: should-cache
         run:  |
           if [[ $(date +%a) == 'Sun' ]]; then
-            echo "::set-output name=cache-from::"
-            echo "::set-output name=cache-to::"
+            echo "cache-from=" >> $GITHUB_OUTPUT
+            echo "cache-to=" >> $GITHUB_OUTPUT
           else
             # disable caching on all days until we confirm our "Requires Manual Intervention"
             # issues aren't due to caching issues
-            echo "::set-output name=cache-from::"
-            echo "::set-output name=cache-to::"
-            # echo "::set-output name=cache-from::type=gha"
-            # echo "::set-output name=cache-to::type=gha,mode=max"
+            echo "cache-from=" >> $GITHUB_OUTPUT
+            echo "cache-to=" >> $GITHUB_OUTPUT
+            # echo "cache-to=type=gha" >> $GITHUB_OUTPUT
+            # echo "cache-to=type=gha,mode=max" >> $GITHUB_OUTPUT
           fi
 
+      - name: Build and push image to scan
+        if: ${{ inputs.scan_image_enabled }}
+        uses: docker/build-push-action@v4
+        with:
+          # If your Dockerfile is not present in the root directory
+          # change it to the correct subdirectory name
+          context: ${{ inputs.docker_context }}
+          file: ${{ inputs.docker_file }}
+          target: ${{ inputs.docker_target }}
+          push: true
+          tags: ${{ inputs.image }}:scan-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: ${{ steps.should-cache.outputs.cache-from }}
+          cache-to: ${{ steps.should-cache.outputs.cache-to }}
+          secrets: |
+            "oban_key_fingerprint=${{ secrets.OBAN_KEY_FINGERPRINT }}"
+            "oban_license_key=${{ secrets.OBAN_LICENSE_KEY }}"
+            ${{ inputs.docker_secrets }}
+
+      - name: Scan image
+        if: ${{ inputs.scan_image_enabled }}
+        uses: ibm-skills-network/action-scan-container-image@main
+        with:
+          image: ${{ inputs.image }}:scan-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          travis_api_token: ${{ secrets.TRAVIS_API_TOKEN }}
+          image_scan_result_cos_api_token: ${{ secrets.CONTAINER_IMAGE_SCAN_RESULT_COS_API_KEY }}
+          fail_if_overdue: ${{ inputs.scan_fail_if_overdue }}
+
       - name: Build and push
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v4
         with:
           # If your Dockerfile is not present in the root directory
           # change it to the correct subdirectory name
