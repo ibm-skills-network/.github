@@ -162,7 +162,7 @@ jobs:
             ${{ inputs.docker_secrets }}
 
       - name: Scan image
-        if: ${{ inputs.scan_image_enabled }}
+        if: ${{ inputs.scan_image_enabled == true && github.event.release.prerelease != true }}
         uses: ibm-skills-network/action-scan-container-image@main
         with:
           image: ${{ inputs.image }}:scan-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
