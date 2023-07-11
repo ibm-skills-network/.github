@@ -62,6 +62,8 @@ jobs:
     name: docker image
     runs-on: ubuntu-latest
     steps:
+      - name: Print all environment variables
+        run: set
       - name: Get latest release tag
         id: latest-release
         uses: fangqiuming/latest-release-version@v1.1.1
