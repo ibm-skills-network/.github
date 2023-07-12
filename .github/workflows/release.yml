@@ -62,18 +62,15 @@ jobs:
     name: docker image
     runs-on: ubuntu-latest
     steps:
-      # - name: Print contexts
-      #   run: |
-      #     echo "github context: ${{ toJson(github) }}"
-
       - name: Check if ref contains alphabetic character
         id: check-ref
         run: |
           if [[ "${{ github.ref_name }}" =~ [a-zA-Z] ]]; then
-            echo "::set-output name=has_alpha::true"
+            echo "has_alpha=true" >> "$GITHUB_OUTPUT"
           else
-            echo "::set-output name=has_alpha::false"
+            echo "has_alpha=false" >> "$GITHUB_OUTPUT"
           fi
+
       - name: Get latest release tag
         id: latest-release
         uses: fangqiuming/latest-release-version@v1.1.1
@@ -155,7 +152,7 @@ jobs:
           fi
 
       - name: Build and push image to scan
-        if: ${{ inputs.scan_image_enabled }} && (github.event.ref_type != 'tag' || steps.check-tag.outputs.has_alpha == 'false')
+        if: ${{ inputs.scan_image_enabled }} && (github.ref_type != 'tag' || steps.check-ref.outputs.has_alpha == 'false')
         uses: docker/build-push-action@v4
         with:
           # If your Dockerfile is not present in the root directory
@@ -174,7 +171,7 @@ jobs:
             ${{ inputs.docker_secrets }}
 
       - name: Scan image
-        if: ${{ inputs.scan_image_enabled }} && (github.event.ref_type != 'tag' || steps.check-tag.outputs.has_alpha == 'false')
+        if: ${{ inputs.scan_image_enabled }} && (github.ref_type != 'tag' || steps.check-ref.outputs.has_alpha == 'false')
         uses: ibm-skills-network/action-scan-container-image@main
         with:
           image: ${{ inputs.image }}:scan-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
