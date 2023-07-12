@@ -62,12 +62,9 @@ jobs:
     name: docker image
     runs-on: ubuntu-latest
     steps:
-      # - name: Print contexts
-      #   run: |
-      #     echo "github context: ${{ toJson(github) }}"
-      #     echo "job context: ${{ toJson(job) }}"
-      #     echo "runner context: ${{ toJson(runner) }}"
-
+      - name: Print contexts
+        run: |
+          echo "github context: ${{ toJson(github) }}"
       - name: Check if ref contains alphabetic character
         id: check-ref
         run: |
