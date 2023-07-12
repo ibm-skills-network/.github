@@ -151,6 +151,11 @@ jobs:
             # echo "cache-to=type=gha,mode=max" >> $GITHUB_OUTPUT
           fi
 
+      - name: Print ref_type and has_alpha
+        run: |
+          echo "Ref type: ${{ github.ref_type }}"
+          echo "Has alpha: ${{ steps.check-ref.outputs.has_alpha }}"
+
       - name: Build and push image to scan
         if: ${{ inputs.scan_image_enabled }} && (github.ref_type != 'tag' || steps.check-ref.outputs.has_alpha == 'false')
         uses: docker/build-push-action@v4
