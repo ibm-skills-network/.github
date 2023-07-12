@@ -62,7 +62,7 @@ jobs:
     name: docker image
     runs-on: ubuntu-latest
     steps:
-      - name: Check if tag is a non-production release (eg 1.2.3)
+      - name: Check if tag is a non-production release (e.g. 1.2.3-dev.0, 1.2.3-rc.0)
         id: check-ref
         run: |
           if [[ "${{ github.ref_name }}" =~ [a-zA-Z] ]]; then
