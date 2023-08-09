@@ -41,8 +41,8 @@ jobs:
         openssl base64 -d <<<   'ewogICJzY2FuU2V0dGluZ3MiOiB7CiAgICAiY29uZmlnTW9kZSI6ICJMT0NBTCIsCiAgICAiY29uZmlnRXh0ZXJuYWxVUkwiOiAiIiwKICAgICJwcm9qZWN0VG9rZW4iOiAiIiwKICAgICJiYXNlQnJhbmNoZXMiOiBbXQogIH0sCiAgImNoZWNrUnVuU2V0dGluZ3MiOiB7CiAgICAidnVsbmVyYWJsZUNoZWNrUnVuQ29uY2x1c2lvbkxldmVsIjogImZhaWx1cmUiLAogICAgImRpc3BsYXlNb2RlIjogImRpZmYiCiAgfSwKICAiaXNzdWVTZXR0aW5ncyI6IHsKICAgICJtaW5TZXZlcml0eUxldmVsIjogIkxPVyIKICB9LAogICJyZW1lZGlhdGVTZXR0aW5ncyI6IHsKICAgICJlbmFibGVSZW5vdmF0ZSI6IHRydWUsCiAgICAidHJhbnNpdGl2ZVJlbWVkaWF0aW9uIjogZmFsc2UKICB9Cn0KCg==' > .whitesource
         
         echo "base64 decoding whitesource.config file..."
-        openssl base64 -d <<<   'bnBtLmluY2x1ZGVEZXZEZXBlbmRlbmNpZXM9ZmFsc2U=' 
-        openssl base64 -d <<<   'bnBtLmluY2x1ZGVEZXZEZXBlbmRlbmNpZXM9ZmFsc2U=' > whitesource.config
+        openssl base64 -d <<<   'bnBtLmluY2x1ZGVEZXZEZXBlbmRlbmNpZXM9ZmFsc2UKYnVuZGxlci5pZ25vcmVTb3VyY2VGaWxlcz10cnVlCmJ1bmRsZXIucnVuUHJlU3RlcD1mYWxzZQoiZXhjbHVkZSI6IFsKICAiKiovR2VtZmlsZS5sb2NrOmdyb3VwOmRldmVsb3BtZW50IiwKICAiKiovR2VtZmlsZS5sb2NrOmdyb3VwOnRlc3QiCl0K' 
+        openssl base64 -d <<<   'bnBtLmluY2x1ZGVEZXZEZXBlbmRlbmNpZXM9ZmFsc2UKYnVuZGxlci5pZ25vcmVTb3VyY2VGaWxlcz10cnVlCmJ1bmRsZXIucnVuUHJlU3RlcD1mYWxzZQoiZXhjbHVkZSI6IFsKICAiKiovR2VtZmlsZS5sb2NrOmdyb3VwOmRldmVsb3BtZW50IiwKICAiKiovR2VtZmlsZS5sb2NrOmdyb3VwOnRlc3QiCl0K' > whitesource.config
 
         git add .whitesource whitesource.config
         git commit -m "use GHE .whitesource and whitesource.config"
