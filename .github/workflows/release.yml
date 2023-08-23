@@ -2,45 +2,45 @@ on:
   workflow_call:
     inputs:
       image:
-        description: 'Full docker image location. e.g. us.icr.io/skills-network-portals/curator'
+        description: "Full docker image location. e.g. us.icr.io/skills-network-portals/curator"
         required: true
         type: string
       scan_image_enabled:
-        description: 'Set to true to scan your container image for vulnerabilities before pushing it to ICR'
+        description: "Set to true to scan your container image for vulnerabilities before pushing it to ICR"
         required: false
         type: boolean
         default: true
       scan_fail_if_overdue:
-        description: 'Set to true to prevent images with overdue vulnerabilities from being pushed to ICR'
+        description: "Set to true to prevent images with overdue vulnerabilities from being pushed to ICR"
         required: false
         type: boolean
         default: true
       docker_target:
-        description: 'Build target for multi-stage docker build'
-        default: 'monkey-patched'
+        description: "Build target for multi-stage docker build"
+        default: "monkey-patched"
         required: false
         type: string
       docker_context:
-        description: 'Build context directory'
-        default: '.'
+        description: "Build context directory"
+        default: "."
         required: false
         type: string
       docker_file:
-        description: 'Path to the Dockerfile'
-        default: ''
+        description: "Path to the Dockerfile"
+        default: ""
         required: false
         type: string
       docker_secrets:
-        description: 'List of secrets to expose to the build (e.g., key=string, GIT_AUTH_TOKEN=mytoken)'
+        description: "List of secrets to expose to the build (e.g., key=string, GIT_AUTH_TOKEN=mytoken)"
         required: false
         type: string
       push:
-        description: 'Should the docker image be pushed to ICR'
+        description: "Should the docker image be pushed to ICR"
         default: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || startsWith(github.ref, 'refs/tags/') }}
         required: false
         type: boolean
       maximize_free_space:
-        description: 'Set to true to maximize space on github workflow runners'
+        description: "Set to true to maximize space on github workflow runners"
         required: false
         type: boolean
         default: false
@@ -84,7 +84,7 @@ jobs:
           remove-android: true
           remove-haskell: true
           remove-codeql: true
-          remove-docker-images: true  # just removes cached images
+          remove-docker-images: true # just removes cached images
         if: ${{ inputs.maximize_free_space }}
 
       - name: Get latest release tag
@@ -100,7 +100,7 @@ jobs:
         # base release is x.y.z-YYYYMMDD is x.y.z
       - name: Get base release tag
         id: base-release
-        run:  |
+        run: |
           echo "base-release=$(echo '${{ steps.latest-release.outputs.tag_name }}' | sed -r 's/(-[0-9]{8})$//')" >> $GITHUB_OUTPUT
 
       - name: print release tag
@@ -149,7 +149,7 @@ jobs:
 
       - name: Should we cache
         id: should-cache
-        run:  |
+        run: |
           if [[ $(date +%a) == 'Sun' ]]; then
             echo "cache-from=" >> $GITHUB_OUTPUT
             echo "cache-to=" >> $GITHUB_OUTPUT
@@ -179,12 +179,11 @@ jobs:
           secrets: |
             "oban_key_fingerprint=${{ secrets.OBAN_KEY_FINGERPRINT }}"
             "oban_license_key=${{ secrets.OBAN_LICENSE_KEY }}"
+            "IBM_CLOUD_API_KEY=${{ secrets.IBM_CLOUD_API_KEY }}"
             ${{ inputs.docker_secrets }}
           build-args: |-
             SN_GITHUB_NPM_TOKEN=${{ secrets.NPM_TOKEN }}
             SN_GITHUB_NPM_REGISTRY=https://npm.pkg.github.com
-            IBM_CLOUD_API_KEY=${{ secrets.IBM_CLOUD_API_KEY }}
-
 
       - name: Scan image
         if: ${{ inputs.scan_image_enabled && ( github.ref_type != 'tag' || steps.check-ref.outputs.has_alpha == 'false' ) }}
@@ -211,8 +210,8 @@ jobs:
           secrets: |
             "oban_key_fingerprint=${{ secrets.OBAN_KEY_FINGERPRINT }}"
             "oban_license_key=${{ secrets.OBAN_LICENSE_KEY }}"
+            "IBM_CLOUD_API_KEY=${{ secrets.IBM_CLOUD_API_KEY }}"
             ${{ inputs.docker_secrets }}
           build-args: |-
             SN_GITHUB_NPM_TOKEN=${{ secrets.NPM_TOKEN }}
             SN_GITHUB_NPM_REGISTRY=https://npm.pkg.github.com
-            IBM_CLOUD_API_KEY=${{ secrets.IBM_CLOUD_API_KEY }}
