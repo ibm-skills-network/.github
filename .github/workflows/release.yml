@@ -147,11 +147,6 @@ jobs:
             type=schedule,pattern=${{ steps.base-release.outputs.base-release }}-{{date 'YYYYMMDD'}}
             type=raw,value=manual,suffix=${{ github.event.inputs.suffix }},enable=${{ github.event_name == 'workflow_dispatch' }}
 
-      - name: Setup npm registries
-        run:  |
-          echo "@ibm-skills-network:registry=https://npm.pkg.github.com" > .npmrc
-          echo "//npm.pkg.github.com/:_authToken=${{ secrets.NPM_TOKEN }}" >> .npmrc
-
       - name: Should we cache
         id: should-cache
         run:  |
@@ -185,6 +180,10 @@ jobs:
             "oban_key_fingerprint=${{ secrets.OBAN_KEY_FINGERPRINT }}"
             "oban_license_key=${{ secrets.OBAN_LICENSE_KEY }}"
             ${{ inputs.docker_secrets }}
+          build-args: |-
+            SN_GITHUB_NPM_TOKEN=${{ secrets.NPM_TOKEN }}
+            SN_GITHUB_NPM_REGISTRY=https://npm.pkg.github.com
+            
 
       - name: Scan image
         if: ${{ inputs.scan_image_enabled && ( github.ref_type != 'tag' || steps.check-ref.outputs.has_alpha == 'false' ) }}
@@ -212,3 +211,6 @@ jobs:
             "oban_key_fingerprint=${{ secrets.OBAN_KEY_FINGERPRINT }}"
             "oban_license_key=${{ secrets.OBAN_LICENSE_KEY }}"
             ${{ inputs.docker_secrets }}
+          build-args: |-
+            SN_GITHUB_NPM_TOKEN=${{ secrets.NPM_TOKEN }}
+            SN_GITHUB_NPM_REGISTRY=https://npm.pkg.github.com
