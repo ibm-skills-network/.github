@@ -228,6 +228,6 @@ jobs:
             -a "repo=${{ github.repository }}" \
             -a "workflow=${{ github.workflow }}" \
             -a "ref=${{ github.sha }}" \
-            ${{ steps.set-image.outputs.repository }}@${{ steps.build-push.outputs.digest }}
+            ${{ inputs.image }}@${{ steps.build-push.outputs.digest }}
         env:
           COSIGN_PASSWORD: ${{ secrets.CONTAINER_IMAGE_SIGNING_PASSWORD }}
