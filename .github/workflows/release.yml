@@ -185,14 +185,14 @@ jobs:
             SN_GITHUB_NPM_TOKEN=${{ secrets.NPM_TOKEN }}
             SN_GITHUB_NPM_REGISTRY=https://npm.pkg.github.com
 
-      # - name: Scan image
-      #   if: ${{ inputs.scan_image_enabled && ( github.ref_type != 'tag' || steps.check-ref.outputs.has_alpha == 'false' ) }}
-      #   uses: ibm-skills-network/action-scan-container-image@main
-      #   with:
-      #     image: ${{ inputs.image }}:scan-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
-      #     travis_api_token: ${{ secrets.TRAVIS_API_TOKEN }}
-      #     image_scan_result_cos_api_token: ${{ secrets.CONTAINER_IMAGE_SCAN_RESULT_COS_API_KEY }}
-      #     fail_if_overdue: ${{ inputs.scan_fail_if_overdue }}
+      - name: Scan image
+        if: ${{ inputs.scan_image_enabled && ( github.ref_type != 'tag' || steps.check-ref.outputs.has_alpha == 'false' ) }}
+        uses: ibm-skills-network/action-scan-container-image@main
+        with:
+          image: ${{ inputs.image }}:scan-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          travis_api_token: ${{ secrets.TRAVIS_API_TOKEN }}
+          image_scan_result_cos_api_token: ${{ secrets.CONTAINER_IMAGE_SCAN_RESULT_COS_API_KEY }}
+          fail_if_overdue: ${{ inputs.scan_fail_if_overdue }}
 
       - name: Build and push
         id: build-push
