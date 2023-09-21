@@ -218,11 +218,14 @@ jobs:
             SN_GITHUB_NPM_REGISTRY=https://npm.pkg.github.com
 
       - uses: sigstore/cosign-installer@main
+        if: ${{ inputs.push }}
 
       - name: Write signing key to disk
+        if: ${{ inputs.push }}
         run: echo "${{ secrets.CONTAINER_IMAGE_SIGNING_PRIVATE_KEY }}" > cosign.key
 
       - name: Sign container image
+        if: ${{ inputs.push }}
         run: |
           cosign sign --key cosign.key \
             -a "repo=${{ github.repository }}" \
