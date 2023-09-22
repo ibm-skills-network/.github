@@ -204,7 +204,8 @@ jobs:
           context: ${{ inputs.docker_context }}
           file: ${{ inputs.docker_file }}
           target: ${{ inputs.docker_target }}
-          push: ${{ inputs.push }}
+          # push: ${{ inputs.push }}
+          push: false
           tags: ${{ steps.meta.outputs.tags }}
           outputs: type=oci
           labels: ${{ steps.meta.outputs.labels }}
