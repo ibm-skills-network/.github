@@ -221,7 +221,7 @@ jobs:
             SN_GITHUB_NPM_REGISTRY=https://npm.pkg.github.com
 
       - name: Install Skopeo
-        run: sudo apt-get update && sudo apt-get install -y software-properties-common && sudo add-apt-repository -y ppa:projectatomic/ppa && sudo apt-get update && sudo apt-get install -y skopeo
+        run: sudo apt-get update && sudo apt-get install -y skopeo
 
       - name: Load OCI Image with Skopeo
         run: skopeo copy oci:./image.oci docker-daemon:${{ env.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
