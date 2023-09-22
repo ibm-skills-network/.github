@@ -237,7 +237,7 @@ jobs:
       - uses: anchore/sbom-action@v0
         if: ${{ inputs.push }}
         with:
-          image: ${{ inputs.image }}:${{ steps.push-image.outputs.digest }}
+          image: ${{ inputs.image }}@${{ steps.push-image.outputs.digest }}
 
       - uses: sigstore/cosign-installer@main
         if: ${{ inputs.push }}
