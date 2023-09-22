@@ -224,7 +224,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y skopeo
 
       - name: Load OCI Image with Skopeo
-        run: skopeo copy oci:./image.oci docker-daemon:${{ env.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+        run: skopeo copy oci:./image.oci docker-daemon:${{ inputs.image }}@${{ steps.build-push.outputs.digest }}
 
       - name: Push Docker image
         uses: docker/build-push-action@v2
