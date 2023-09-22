@@ -207,7 +207,7 @@ jobs:
           # push: ${{ inputs.push }}
           push: false
           tags: ${{ steps.meta.outputs.tags }}
-          outputs: type=oci,dest=./image.oci
+          outputs: type=oci,dest=./image.oci,tar=false
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: ${{ steps.should-cache.outputs.cache-from }}
           cache-to: ${{ steps.should-cache.outputs.cache-to }}
