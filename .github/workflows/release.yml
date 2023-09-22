@@ -206,7 +206,8 @@ jobs:
           target: ${{ inputs.docker_target }}
           # push: ${{ inputs.push }}
           push: false
-          tags: ${{ steps.meta.outputs.tags }}
+          # tags: ${{ steps.meta.outputs.tags }}
+          # TODO: confirm all these things still included
           outputs: type=oci,dest=./image.oci,tar=false
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: ${{ steps.should-cache.outputs.cache-from }}
@@ -227,6 +228,7 @@ jobs:
         run: skopeo copy oci:./image.oci docker-daemon:${{ steps.meta.outputs.tags }}
 
       - name: Push Image
+        id: push-image
         uses: docker/build-push-action@v2
         with:
           push: true
@@ -235,7 +237,7 @@ jobs:
       - uses: anchore/sbom-action@v0
         if: ${{ inputs.push }}
         with:
-          image: ${{ inputs.image }}@${{ steps.push-image.outputs.digest }}
+          image: ${{ inputs.image }}:${{ steps.push-image.outputs.digest }}
 
       - uses: sigstore/cosign-installer@main
         if: ${{ inputs.push }}
