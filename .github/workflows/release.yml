@@ -195,7 +195,7 @@ jobs:
       #     image_scan_result_cos_api_token: ${{ secrets.CONTAINER_IMAGE_SCAN_RESULT_COS_API_KEY }}
       #     fail_if_overdue: ${{ inputs.scan_fail_if_overdue }}
 
-      - name: Build Image
+      - name: Build OCI Image
         id: build-image
         uses: docker/build-push-action@v5
         with:
@@ -227,7 +227,7 @@ jobs:
       - name: Load OCI Image with Skopeo
         run: skopeo copy oci:./image.oci docker-daemon:${{ steps.meta.outputs.tags }}
 
-      - name: Push Image
+      - name: Push OCI Image
         id: push-image
         uses: docker/build-push-action@v5
         with:
@@ -249,7 +249,7 @@ jobs:
       - name: Sign container image
         if: ${{ inputs.push }}
         run: |
-          cosign sign --upload-tlog=false --key cosign.key \
+          cosign sign --tlog-upload=false --key cosign.key \
             -a "repo=${{ github.repository }}" \
             -a "workflow=${{ github.workflow }}" \
             -a "ref=${{ github.sha }}" \
