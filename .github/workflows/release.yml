@@ -173,6 +173,7 @@ jobs:
           target: ${{ inputs.docker_target }}
           push: true
           tags: ${{ inputs.image }}:scan-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          outputs: type=oci
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: ${{ steps.should-cache.outputs.cache-from }}
           cache-to: ${{ steps.should-cache.outputs.cache-to }}
@@ -205,6 +206,7 @@ jobs:
           target: ${{ inputs.docker_target }}
           push: ${{ inputs.push }}
           tags: ${{ steps.meta.outputs.tags }}
+          outputs: type=oci
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: ${{ steps.should-cache.outputs.cache-from }}
           cache-to: ${{ steps.should-cache.outputs.cache-to }}
@@ -216,6 +218,11 @@ jobs:
           build-args: |-
             SN_GITHUB_NPM_TOKEN=${{ secrets.NPM_TOKEN }}
             SN_GITHUB_NPM_REGISTRY=https://npm.pkg.github.com
+
+      - uses: anchore/sbom-action@v0
+        if: ${{ inputs.push }}
+        with:
+          image: ${{ inputs.image }}@${{ steps.build-push.outputs.digest }}
 
       - uses: sigstore/cosign-installer@main
         if: ${{ inputs.push }}
