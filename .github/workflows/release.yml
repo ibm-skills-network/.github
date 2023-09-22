@@ -249,7 +249,7 @@ jobs:
       - name: Sign container image
         if: ${{ inputs.push }}
         run: |
-          cosign sign --insecure-ignore-tlog=true --key cosign.key \
+          cosign sign --upload-tlog=false --key cosign.key \
             -a "repo=${{ github.repository }}" \
             -a "workflow=${{ github.workflow }}" \
             -a "ref=${{ github.sha }}" \
