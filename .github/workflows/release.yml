@@ -195,7 +195,7 @@ jobs:
           fail_if_overdue: ${{ inputs.scan_fail_if_overdue }}
         
       - name: Demo - Check icr and compare to current image
-        run: echo "${{ github.ref_name }}"
+        run: echo "${{ github.ref_name }}" -- echo ${{ inputs.image }}
 
       - name: Build and push
         id: build-push
