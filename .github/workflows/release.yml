@@ -193,6 +193,9 @@ jobs:
           travis_api_token: ${{ secrets.TRAVIS_API_TOKEN }}
           image_scan_result_cos_api_token: ${{ secrets.CONTAINER_IMAGE_SCAN_RESULT_COS_API_KEY }}
           fail_if_overdue: ${{ inputs.scan_fail_if_overdue }}
+        
+      - name: Demo - Check icr and compare to current image
+        run: echo "${{ github.ref_name }}"
 
       - name: Build and push
         id: build-push
