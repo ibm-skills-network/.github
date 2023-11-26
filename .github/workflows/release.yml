@@ -199,10 +199,10 @@ jobs:
         run: |
           IMAGE="${{ inputs.image }}:${{ github.ref_name }}"
           if docker manifest inspect "$IMAGE" &> /dev/null ; then 
-            IMAGE_EXISTS=true >> "$GITHUB_ENV"
+            echo IMAGE_EXISTS=true >> "$GITHUB_ENV"
             echo "Image found in ICR: ${IMAGE}" 
           else 
-            IMAGE_EXISTS=false >> "$GITHUB_ENV"
+            echo IMAGE_EXISTS=false >> "$GITHUB_ENV"
             echo "Image not found in ICR: ${IMAGE}" 
           fi
 
