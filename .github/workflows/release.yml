@@ -206,9 +206,14 @@ jobs:
             echo "Image not found in ICR: ${IMAGE}" 
           fi
 
-      - name: Skip build and push?
-        run: echo "Image is found on ICR, skipping build and push"
-        if: env.IMAGE_EXISTS=='true'
+      - name: Fail if image already exists
+        run: |
+          if [ "$IMAGE_EXISTS" == "true" ]; then
+            echo "Image already exists. Failing the release."
+            exit 1
+          fi
+        env:
+          IMAGE_EXISTS: ${{ env.IMAGE_EXISTS }}
 
       - name: Build and push
         id: build-push
