@@ -206,9 +206,9 @@ jobs:
             echo "Image not found in ICR: ${IMAGE}" 
           fi
       
-      - name: Build and push?
+      - name: Skip build and push?
         run: echo "Image is found on ICR, skipping build and push"
-        if: env.IMAGE_EXISTS=="true"
+        if: env.IMAGE_EXISTS=='true'
 
       - name: Build and push
         id: build-push
@@ -232,7 +232,7 @@ jobs:
           build-args: |-
             SN_GITHUB_NPM_TOKEN=${{ secrets.NPM_TOKEN }}
             SN_GITHUB_NPM_REGISTRY=https://npm.pkg.github.com
-        if: env.IMAGE_EXISTS == "false"
+        if: env.IMAGE_EXISTS == 'false'
             
       - uses: sigstore/cosign-installer@main
         if: ${{ inputs.push }}
