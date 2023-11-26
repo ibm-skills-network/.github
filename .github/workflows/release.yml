@@ -205,6 +205,10 @@ jobs:
             IMAGE_EXISTS=false
             echo "Image not found in ICR: ${IMAGE}" 
           fi
+      
+      - name: Build and push?
+        run: echo "Image is found on ICR, skipping build and push"
+        if: env.IMAGE_EXISTS=="true"
 
       - name: Build and push
         id: build-push
