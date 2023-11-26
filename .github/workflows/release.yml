@@ -199,13 +199,13 @@ jobs:
         run: |
           IMAGE="${{ inputs.image }}:${{ github.ref_name }}"
           if docker manifest inspect "$IMAGE" &> /dev/null ; then 
-            IMAGE_EXISTS=true
+            IMAGE_EXISTS=true >> $GITHUB_ENV
             echo "Image found in ICR: ${IMAGE}" 
           else 
-            IMAGE_EXISTS=false
+            IMAGE_EXISTS=false >> $GITHUB_ENV
             echo "Image not found in ICR: ${IMAGE}" 
           fi
-      
+
       - name: Skip build and push?
         run: echo "Image is found on ICR, skipping build and push"
         if: env.IMAGE_EXISTS=='true'
@@ -233,7 +233,7 @@ jobs:
             SN_GITHUB_NPM_TOKEN=${{ secrets.NPM_TOKEN }}
             SN_GITHUB_NPM_REGISTRY=https://npm.pkg.github.com
         if: env.IMAGE_EXISTS == 'false'
-            
+
       - uses: sigstore/cosign-installer@main
         if: ${{ inputs.push }}
 
