@@ -162,6 +162,10 @@ jobs:
             # echo "cache-to=type=gha,mode=max" >> $GITHUB_OUTPUT
           fi
 
+      - name: Fetch Skills Network Certificate Authority Public Certificate
+        run: |
+          echo "${{ secrets.ROOT_CA_CERTIFICATE_BASE64 }}" | base64 -d > rootCA.crt
+
       - name: Build and push image to scan
         if: ${{ inputs.scan_image_enabled && ( github.ref_type != 'tag' || steps.check-ref.outputs.has_alpha == 'false' ) }}
         uses: docker/build-push-action@v5
