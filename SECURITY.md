@@ -9,7 +9,7 @@ If you believe you have found a security vulnerability in any Skills Network-own
 
 **Please do not report security vulnerabilities through public GitHub issues, discussions, or pull requests.**
 
-Instead, please [send an email to security@skills.network](mailto:security@skills.network)
+Instead, please [send an email to skills.network@ibm.com](mailto:skills.network@ibm.com)
 
 Please include as much of the information listed below as you can to help us better understand and resolve the issue:
 
