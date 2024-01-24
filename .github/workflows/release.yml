@@ -89,10 +89,7 @@ jobs:
 
       - name: Get latest release tag
         id: latest-release
-        uses: fangqiuming/latest-release-version@v1.1.1
-        with:
-          repository: ${{ github.repository }}
-          token: ${{ github.token }}
+        uses: Lukacs5/action-latest-release-version@v2.0.0
         if: ${{ github.event_name == 'schedule' }}
 
         # base release is the release without any security patch suffix
@@ -101,7 +98,7 @@ jobs:
       - name: Get base release tag
         id: base-release
         run: |
-          echo "base-release=$(echo '${{ steps.latest-release.outputs.tag_name }}' | sed -r 's/(-[0-9]{8})$//')" >> $GITHUB_OUTPUT
+          echo "base-release=$(echo '${{ steps.latest-release.outputs.latest-release }}' | sed -r 's/(-[0-9]{8})$//')" >> $GITHUB_OUTPUT
 
       - name: print release tag
         run: |

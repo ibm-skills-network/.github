@@ -19,14 +19,14 @@ jobs:
     name: static analysis
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
     - id: skills-network-bot-app
-      uses: getsentry/action-github-app-token@v1
+      uses: actions/create-github-app-token@v1
       with:
-        app_id: ${{ secrets.skills-network-bot-app-id }}
-        private_key: ${{ secrets.skills-network-bot-private-key }}
+        app-id: ${{ secrets.skills-network-bot-app-id }}
+        private-key: ${{ secrets.skills-network-bot-private-key }}
     - name: download SAST client
       run: |
         curl -sS https://cloud.appscan.com/api/SCX/StaticAnalyzer/SAClientUtil?os=linux -o /tmp/sast-client.zip
@@ -63,7 +63,7 @@ jobs:
               "AssetGroupId": "'"$ASOC_ASSET_GROUP_ID"'",
             }' | jq -r .Id)
         fi
-        echo "::set-output name=APPSCAN_APP_ID::$app_id"
+        echo "APPSCAN_APP_ID=$app_id" >> $GITHUB_OUTPUT
 
     - name: prepare and queue scan
       env:
