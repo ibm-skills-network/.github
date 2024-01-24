@@ -14,16 +14,16 @@ jobs:
     name: static analysis
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
     - id: skills-network-bot-app
-      uses: getsentry/action-github-app-token@v1
+      uses: getsentry/action-github-app-token@v2
       with:
         app_id: ${{ secrets.skills-network-bot-app-id }}
         private_key: ${{ secrets.skills-network-bot-private-key }}
     - name: HCL AppScan CodeSweep
-      uses: HCL-TECH-SOFTWARE/appscan-codesweep-action@v1
+      uses: HCL-TECH-SOFTWARE/appscan-codesweep-action@v2
       with:
         asoc_key: ${{ secrets.asoc-key }}
         asoc_secret: ${{ secrets.asoc-secret }}
