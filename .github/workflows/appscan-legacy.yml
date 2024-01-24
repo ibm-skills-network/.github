@@ -23,10 +23,10 @@ jobs:
       with:
         fetch-depth: 0
     - id: skills-network-bot-app
-      uses: getsentry/action-github-app-token@v2
+      uses: actions/create-github-app-token@v1
       with:
-        app_id: ${{ secrets.skills-network-bot-app-id }}
-        private_key: ${{ secrets.skills-network-bot-private-key }}
+        app-id: ${{ secrets.skills-network-bot-app-id }}
+        private-key: ${{ secrets.skills-network-bot-private-key }}
     - name: download SAST client
       run: |
         curl -sS https://cloud.appscan.com/api/SCX/StaticAnalyzer/SAClientUtil?os=linux -o /tmp/sast-client.zip
