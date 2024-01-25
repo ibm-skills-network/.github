@@ -89,8 +89,10 @@ jobs:
 
       - name: Get latest release tag
         id: latest-release
-        uses: Lukacs5/action-latest-release-version@v2.0.0
-        if: ${{ github.event_name == 'schedule' }}
+        uses: jossef/action-latest-release-info@v1.2.1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        # if: ${{ github.event_name == 'schedule' }}
 
         # base release is the release without any security patch suffix
         # base release of x.y.z is x.y.z
@@ -98,9 +100,9 @@ jobs:
       - name: Get base release tag
         id: base-release
         run: |
-          echo "base-release=$(echo '${{ steps.latest-release.outputs.latest-release }}' | sed -r 's/(-[0-9]{8})$//')" >> $GITHUB_OUTPUT
+          echo "base-release=$(echo '${{ steps.latest-release.outputs.tag_name }}' | sed -r 's/(-[0-9]{8})$//')" >> $GITHUB_OUTPUT
 
-      - name: print release tag
+      - name: Print release tag
         run: |
           echo "${{ steps.base-release.outputs.base-release }}"
         if: ${{ github.event_name == 'schedule' }}
@@ -111,7 +113,7 @@ jobs:
         with:
           token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
           submodules: recursive
-          ref: ${{ steps.latest-release.outputs.latest-release }}
+          ref: ${{ steps.latest-release.outputs.tag_name }}
         if: ${{ github.event_name == 'schedule' }}
       - uses: actions/checkout@v4
         with:
