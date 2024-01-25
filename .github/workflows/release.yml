@@ -89,10 +89,12 @@ jobs:
 
       - name: Get latest release tag
         id: latest-release
-        uses: jossef/action-latest-release-info@v1.2.1
+        uses: joutvhu/get-release@v1
+        with:
+          latest: true
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        # if: ${{ github.event_name == 'schedule' }}
+        if: ${{ github.event_name == 'schedule' }}
 
         # base release is the release without any security patch suffix
         # base release of x.y.z is x.y.z
