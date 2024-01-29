@@ -14,22 +14,20 @@ jobs:
   mirror:
     name: mirror
     runs-on: ubuntu-latest
+    env:
+      GH_HOST: github.ibm.com
     steps:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
-    - name: Set up SSH agent
-      uses: webfactory/ssh-agent@v0.8.0
-      with:
-        ssh-private-key: ${{ secrets.ssh_private_key }}
-        log-public-key: false
-
     - name: Check if target mirror repository exists
       continue-on-error: true
       id: check_repo
       run: |
-        git ls-remote ${{ format('git@github.ibm.com:{0}/{1}.git', 'skills-network-mirror', inputs.repo_name) }} > /dev/null
+        gh repo view github.ibm.com/skills-network-mirror/${{ inputs.repo_name }} > /dev/null
+      env:
+        GH_ENTERPRISE_TOKEN: ${{ secrets.ghe_token }}
 
     - name: Check if token was provided
       if: ${{ steps.check_repo.outcome == 'failure'}}
@@ -40,23 +38,11 @@ jobs:
         fi
 
     - name: Create repository if it does not exist
-      if: ${{ success() && steps.check_repo.outcome == 'failure'}}
-      timeout-minutes: 2
+      if: ${{ steps.check_repo.outcome == 'failure'}}
+      run: |
+        gh repo create github.ibm.com/skills-network-mirror/${{ inputs.repo_name }} --internal
       env:
         GH_ENTERPRISE_TOKEN: ${{ secrets.ghe_token }}
-        GH_HOST: github.ibm.com
-      run: |
-        gh auth status
-        gh api \
-          --method POST \
-          -H "Accept: application/vnd.github+json" \
-          --hostname ${{ env.GH_HOST }} \
-          /orgs/skills-network-mirror/repos \
-          -f name='${{ inputs.repo_name }}' \
-          -F visibility='internal' \
-          -F has_issues=true \
-          -F has_projects=true \
-          -F has_wiki=false
 
     - name: Mirror repository
       uses: pixta-dev/repository-mirroring-action@v1
