@@ -25,7 +25,7 @@ jobs:
       continue-on-error: true
       id: check_repo
       run: |
-        gh repo view github.ibm.com/skills-network-mirror/${{ inputs.repo_name }} > /dev/null
+        gh repo view $GH_HOST/skills-network-mirror/${{ inputs.repo_name }} > /dev/null
       env:
         GH_ENTERPRISE_TOKEN: ${{ secrets.ghe_token }}
 
@@ -40,7 +40,7 @@ jobs:
     - name: Create repository if it does not exist
       if: ${{ steps.check_repo.outcome == 'failure'}}
       run: |
-        gh repo create github.ibm.com/skills-network-mirror/${{ inputs.repo_name }} --internal
+        gh repo create $GH_HOST/skills-network-mirror/${{ inputs.repo_name }} --internal
       env:
         GH_ENTERPRISE_TOKEN: ${{ secrets.ghe_token }}
 
