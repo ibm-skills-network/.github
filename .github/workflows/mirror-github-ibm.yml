@@ -43,7 +43,7 @@ jobs:
       if: ${{ success() && steps.check_repo.outcome == 'failure'}}
       timeout-minutes: 2
       run: |
-        gh repo create ${{ format('skills-network-mirror/{0}', inputs.repo_name) }} --internal
+        gh repo create ${{ format('github.ibm.com/skills-network-mirror/{0}', inputs.repo_name) }} --internal --source=.
       env:
         GH_TOKEN: ${{ secrets.ghe_token }}
         GH_HOST: github.ibm.com
