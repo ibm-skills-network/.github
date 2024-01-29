@@ -40,7 +40,7 @@ jobs:
     - name: Create repository if it does not exist
       if: ${{ steps.check_repo.outcome == 'failure'}}
       run: |
-        gh repo create $GH_HOST/skills-network-mirror/${{ inputs.repo_name }} --internal --source=.
+        gh repo create $GH_HOST/skills-network-mirror/${{ inputs.repo_name }} --internal --source=. --remote=upstream --push
       env:
         GH_ENTERPRISE_TOKEN: ${{ secrets.ghe_token }}
 
