@@ -21,14 +21,16 @@ jobs:
       uses: webfactory/ssh-agent@v0.8.0
       with:
         ssh-private-key: ${{ secrets.ssh_private_key }}
+        log-public-key: false
 
     - name: Check if target mirror repository exists
       continue-on-error: true
+      id: check_repo
       run: |
         git ls-remote ${{ format('git@github.ibm.com:{0}/{1}.git', 'skills-network-mirror', inputs.repo_name) }}
 
     - name: Create repository if it does not exist
-      if: failure()
+      if: ${{ steps.check_repo.outcome == 'failure'}}
       run: |
         gh auth login --hostname github.ibm.com
         gh repo create ${{ format('skills-network-mirror/{0}', inputs.repo_name) }} --internal --source=.
