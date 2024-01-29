@@ -2,27 +2,81 @@ on:
   workflow_call:
     inputs:
       repo_name:
+        description: "Name of the repository to mirror to"
         required: true
         type: string
     secrets:
       ssh_private_key:
+        description: "SSH private key for pushing to the mirror repository"
         required: true
+      ghe_token:
+        description: "GitHub Enterprise token for creating the mirror repository if it does not exist"
+        required: false
 
 jobs:
   mirror:
     name: mirror
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
-    - uses: pixta-dev/repository-mirroring-action@v1
+
+    - name: Check if token was provided
+      id: check_token
+      continue-on-error: true
+      run: |
+        if [ -z "${{ secrets.ghe_token }}" ]; then
+          echo "GHE token was not provided"
+          exit 1
+        fi
+
+    - name: Get default branch
+      id: get_default_branch
+      if: ${{ steps.check_token.outcome == 'success' }}
+      run: |
+        echo "DEFAULT_BRANCH=$(gh repo view --json defaultBranchRef --jq .defaultBranchRef.name)" >> "$GITHUB_ENV"
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Check if target mirror repository exists
+      # Only run this step if a token was provided
+      if: ${{ steps.check_token.outcome == 'success' }}
+      continue-on-error: true
+      id: check_repo
+      run: |
+        gh repo view $GH_HOST/skills-network-mirror/${{ inputs.repo_name }} > /dev/null
+      env:
+        GH_ENTERPRISE_TOKEN: ${{ secrets.ghe_token }}
+        GH_HOST: github.ibm.com
+
+    - name: Create repository since it doesn't exist
+      if: ${{ steps.check_repo.outcome == 'failure' }}
+      run: |
+        gh repo create $GH_HOST/skills-network-mirror/${{ inputs.repo_name }} --internal --disable-wiki
+      env:
+        GH_ENTERPRISE_TOKEN: ${{ secrets.ghe_token }}
+        GH_HOST: github.ibm.com
+
+    - name: Mirror repository
+      uses: pixta-dev/repository-mirroring-action@v1
       with:
         target_repo_url:
           ${{ format('git@github.ibm.com:{0}/{1}.git', 'skills-network-mirror', inputs.repo_name) }}
         ssh_private_key:
           ${{ secrets.ssh_private_key }}
-    - run: |
+
+    - name: Set default branch
+      if: ${{ steps.get_default_branch.conclusion == 'success' }}
+      run: |
+        gh repo edit $GH_HOST/skills-network-mirror/${{ inputs.repo_name }} --default-branch=${{ env.DEFAULT_BRANCH }}
+      env:
+        GH_ENTERPRISE_TOKEN: ${{ secrets.ghe_token }}
+        GH_HOST: github.ibm.com
+
+    - name: Fix whitesource
+      run: |
         mkdir -p ~/.ssh
         echo "${{ secrets.ssh_private_key }}" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
