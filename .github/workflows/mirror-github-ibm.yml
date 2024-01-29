@@ -42,7 +42,11 @@ jobs:
     - name: Create repository if it does not exist
       if: ${{ success() && steps.check_repo.outcome == 'failure'}}
       timeout-minutes: 2
+      env:
+        GH_ENTERPRISE_TOKEN: ${{ secrets.ghe_token }}
+        GH_HOST: github.ibm.com
       run: |
+        gh auth status
         gh api \
           --method POST \
           -H "Accept: application/vnd.github+json" \
@@ -53,9 +57,6 @@ jobs:
           -F has_issues=true \
           -F has_projects=true \
           -F has_wiki=false
-      env:
-        GH_TOKEN: ${{ secrets.ghe_token }}
-        GH_HOST: github.ibm.com
 
     - name: Mirror repository
       uses: pixta-dev/repository-mirroring-action@v1
