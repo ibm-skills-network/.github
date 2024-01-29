@@ -7,6 +7,8 @@ on:
     secrets:
       ssh_private_key:
         required: true
+      ghe_token:
+        required: false
 
 jobs:
   mirror:
@@ -29,13 +31,22 @@ jobs:
       run: |
         git ls-remote ${{ format('git@github.ibm.com:{0}/{1}.git', 'skills-network-mirror', inputs.repo_name) }} > /dev/null
 
-    - name: Create repository if it does not exist
+    - name: Check if token was provided
       if: ${{ steps.check_repo.outcome == 'failure'}}
+      run: |
+        if [ -z "${{ secrets.ghe_token }}" ]; then
+          echo "GHE token not provided"
+          exit 1
+        fi
+
+    - name: Create repository if it does not exist
+      if: ${{ success() && steps.check_repo.outcome == 'failure'}}
+      timeout-minutes: 2
       run: |
         gh auth login --hostname github.ibm.com
         gh repo create ${{ format('skills-network-mirror/{0}', inputs.repo_name) }} --internal --source=.
       env:
-        GH_TOKEN: ${{ secrets.GHE_TOKEN }}
+        GH_TOKEN: ${{ secrets.ghe_token }}
 
     - name: Mirror repository
       uses: pixta-dev/repository-mirroring-action@v1
