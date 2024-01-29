@@ -43,7 +43,7 @@ jobs:
       if: ${{ success() && steps.check_repo.outcome == 'failure'}}
       timeout-minutes: 2
       run: |
-        gh auth login --hostname github.ibm.com
+        gh auth login --hostname github.ibm.com --with-token
         gh repo create ${{ format('skills-network-mirror/{0}', inputs.repo_name) }} --internal --source=.
       env:
         GH_TOKEN: ${{ secrets.ghe_token }}
