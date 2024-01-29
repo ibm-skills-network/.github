@@ -43,7 +43,16 @@ jobs:
       if: ${{ success() && steps.check_repo.outcome == 'failure'}}
       timeout-minutes: 2
       run: |
-        gh repo create ${{ format('github.ibm.com/skills-network-mirror/{0}', inputs.repo_name) }} --internal --source=.
+        gh api \
+          --method POST \
+          -H "Accept: application/vnd.github+json" \
+          --hostname ${{ env.GH_HOST }} \
+          /orgs/skills-network-mirror/repos \
+          -f name='${{ inputs.repo_name }}' \
+          -F visibility='internal' \
+          -F has_issues=true \
+          -F has_projects=true \
+          -F has_wiki=false
       env:
         GH_TOKEN: ${{ secrets.ghe_token }}
         GH_HOST: github.ibm.com
