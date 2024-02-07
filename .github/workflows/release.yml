@@ -55,7 +55,7 @@ on:
         required: false
       ICR_PASSWORD:
         required: false
-      NPM_TOKEN:
+      GHEC_NPM_REGISTRY_TOKEN:
         required: false
       TRAVIS_API_TOKEN:
         required: false
@@ -187,7 +187,7 @@ jobs:
             "IBM_CLOUD_API_KEY=${{ secrets.IBM_CLOUD_API_KEY }}"
             ${{ inputs.docker_secrets }}
           build-args: |-
-            SN_GITHUB_NPM_TOKEN=${{ secrets.NPM_TOKEN }}
+            SN_GITHUB_NPM_TOKEN=${{ secrets.GHEC_NPM_REGISTRY_TOKEN }}
             SN_GITHUB_NPM_REGISTRY=https://npm.pkg.github.com
 
       - name: Scan image
@@ -240,7 +240,7 @@ jobs:
             "IBM_CLOUD_API_KEY=${{ secrets.IBM_CLOUD_API_KEY }}"
             ${{ inputs.docker_secrets }}
           build-args: |-
-            SN_GITHUB_NPM_TOKEN=${{ secrets.NPM_TOKEN }}
+            SN_GITHUB_NPM_TOKEN=${{ secrets.GHEC_NPM_REGISTRY_TOKEN }}
             SN_GITHUB_NPM_REGISTRY=https://npm.pkg.github.com
         if: env.IMAGE_EXISTS == 'false'
 
