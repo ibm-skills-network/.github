@@ -79,7 +79,7 @@ jobs:
       - name: Maximize free space on runner
         uses: easimon/maximize-build-space@master
         with:
-          root-reserve-mb: 40960
+          root-reserve-mb: 30000
           remove-dotnet: true
           remove-android: true
           remove-haskell: true
