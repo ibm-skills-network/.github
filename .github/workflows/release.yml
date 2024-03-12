@@ -185,7 +185,6 @@ jobs:
           build-args: |-
             SN_GITHUB_NPM_TOKEN=${{ secrets.NPM_TOKEN }}
             SN_GITHUB_NPM_REGISTRY=https://npm.pkg.github.com
-            IBM_CLOUD_API_KEY=${{ secrets.IBM_CLOUD_API_KEY }}
 
       - name: Scan image
         if: ${{ inputs.scan_image_enabled && ( github.ref_type != 'tag' || steps.check-ref.outputs.has_alpha == 'false' ) }}
