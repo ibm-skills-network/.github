@@ -5,8 +5,8 @@ Contributions to this project are released to the public under the project's ope
 ### Submitting a pull request
 
 0. Fork and clone the repository
-0. Push to your fork and submit a pull request
-0. Wait for your pull request to be reviewed and merged.
+1. Push to your fork and submit a pull request
+2. Wait for your pull request to be reviewed and merged.
 
 Here are a few things you can do that will increase the likelihood of your pull request being accepted:
 
