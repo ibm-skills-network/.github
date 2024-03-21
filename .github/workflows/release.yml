@@ -86,6 +86,14 @@ jobs:
           docker-images: true
           swap-storage: true
         if: ${{ inputs.maximize_free_space }}
+      
+      - name: Increase swap space on runner
+        run: |
+          sudo dd if=/dev/zero of=/swapfile bs=1024 count=5000 && \
+          sudo mkswap /swapfile && \
+          sudo swapon -a /swapfile && \
+          sudo swapon -s
+        if: ${{ inputs.maximize_free_space }}
 
       - name: Get latest release tag
         id: latest-release
