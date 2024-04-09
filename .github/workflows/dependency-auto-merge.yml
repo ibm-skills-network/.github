@@ -14,7 +14,7 @@ jobs:
           github-token: "${{ secrets.GITHUB_TOKEN }}"
       - name: Enable auto-merge
         # Only enable auto-merge if the PR is not a major version update
-        if: steps.metadata.outputs.update-type != 'version-update:semver-major'
+        # if: steps.metadata.outputs.update-type != 'version-update:semver-major'
         # Requires that auto-merge is enabled for the repository
         run: gh pr merge --auto --squash "$PR_URL"
         env:
