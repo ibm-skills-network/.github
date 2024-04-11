@@ -1,34 +1,14 @@
 name: Contrast SAST Scan
 
 on:
-  workflow_call:
+  pull_request:
+  push:
+    branches:
+      - master
+      - main
+  workflow_dispatch:
 
 jobs:
   sast-scan:
-    runs-on: ubuntu-latest
-    name: Run Contrast SAST Scan
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 11
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'adopt'
-
-      - name: Run Contrast SAST Scan
-        uses: ibm-skills-network/action-sast-scan@main
-        with:
-          contrast-api-url: ${{ vars.CONTRAST__API__URL }}
-          jfrog-token: ${{ secrets.JFROG_TOKEN }}
-          contrast-api-agent-version: ${{ vars.CONTRAST_AGENT_VERSION }}
-          contrast-api-user-name: ${{ secrets.CONTRAST__API__USER_NAME }}
-          contrast-api-api-key: ${{ secrets.CONTRAST__API__API_KEY }}
-          contrast-api-service-key: ${{ secrets.CONTRAST__API__SERVICE_KEY }}
-          contrast-api-organization: ${{ secrets.CONTRAST__API__ORGANIZATION }}
-          contrast-api-auth-token: ${{ secrets.CONTRAST__AUTH__TOKEN }}
-          contrast-api-resource-group: ${{ vars.CONTRAST_RESOURCE_GROUP }}
-          file-to-be-scanned: ${{ github.workspace }}
-          project-name: ${{ github.repository }}
+    uses: ibm-skills-network/.github/.github/workflows/contrast-sast-scan.yml@main
+    secrets: inherit
