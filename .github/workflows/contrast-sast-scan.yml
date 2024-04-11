@@ -1,10 +1,80 @@
 name: Contrast SAST Scan
 
 on:
-  pull_request:
-  push:
-    branches:
-      - main
+  workflow_call:
+    inputs:
+      contrast-api-url:
+        description: 'Contrast API URL'
+        required: true
+        type: string
+      jfrog-token:
+        description: 'Jfrog Token'
+        required: true
+        type: string
+      contrast-api-user-name:
+        description: 'Contrast API Username'
+        required: true
+        type: string
+      contrast-api-api-key:
+        description: 'Contrast API Key'
+        required: true
+        type: string
+      contrast-api-agent-version:
+        description: 'Contrast Agent Version'
+        required: false
+        default: '1.0.9'
+        type: string
+      contrast-api-service-key:
+        description: 'Contrast Service Key'
+        required: true
+        type: string
+      contrast-api-organization:
+        description: 'Contrast Organization ID'
+        required: true
+        type: string
+      contrast-api-auth-token:
+        description: 'Contrast Auth Token'
+        required: true
+        type: string
+      contrast-api-resource-group:
+        description: 'Resource group name'
+        required: true
+        type: string
+      project-name:
+        description: 'Project name for the scan'
+        required: true
+        default: 'contrast-sast-scan'
+        type: string
+      file-to-be-scanned:
+        description: 'File or directory path of the codebase to scan'
+        required: false
+        default: '.'
+        type: string
+      
+    secrets:
+      jfrog-token:
+        required: true
+      contrast-api-agent-version:
+        required: false
+      contrast-api-user-name:
+        required: true
+      contrast-api-api-key:
+        required: true
+      contrast-api-service-key: 
+        required: true  
+      contrast-api-organization:
+        required: true 
+      contrast-api-auth-token: 
+        required: true 
+      file-to-be-scanned: 
+        required: false 
+      project-name:
+        required: true 
+    variables: 
+      contrast-api-url: 
+        required: true 
+      contrast-api-resource-group:
+        required: true 
 
 jobs:
   sast-scan:
