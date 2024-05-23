@@ -63,12 +63,12 @@ on:
         required: false
 
 jobs:
-  check-branch:
+  needs-scan-for-vulnerabilities:
     runs-on: ubuntu-latest
     outputs:
-      skip: ${{ steps.check-branch.outputs.skip }}
+      skip: ${{ steps.needs-scan-for-vulnerabilities.outputs.skip }}
     steps:
-      - id: check-branch
+      - id: needs-scan-for-vulnerabilities
         run: |
           if [[ "${{ github.ref }}" =~ ^refs/heads/dependabot.* || "${{ github.ref }}" =~ ^refs/heads/whitesource-remediate.* ]]; then
             echo "skip=true" >> $GITHUB_OUTPUT
@@ -77,7 +77,7 @@ jobs:
           fi
 
   build:
-    needs: check-branch
+    needs: needs-scan-for-vulnerabilities
     name: docker image
     runs-on: ubuntu-latest
     steps:
@@ -183,7 +183,7 @@ jobs:
           echo "${{ secrets.ROOT_CA_CERTIFICATE_BASE64 }}" | base64 -d > rootCA.crt
 
       - name: Build and push image to scan
-        if: ${{ needs.check-branch.outputs.skip == 'false' && inputs.scan_image_enabled && ( github.ref_type != 'tag' || steps.check-ref.outputs.has_alpha == 'false' ) }}
+        if: ${{ needs.needs-scan-for-vulnerabilities.outputs.skip == 'false' && inputs.scan_image_enabled && ( github.ref_type != 'tag' || steps.check-ref.outputs.has_alpha == 'false' ) }}
         uses: docker/build-push-action@v5
         with:
           # If your Dockerfile is not present in the root directory
@@ -206,7 +206,7 @@ jobs:
             SN_GITHUB_NPM_REGISTRY=https://npm.pkg.github.com
 
       - name: Scan image
-        if: ${{ needs.check-branch.outputs.skip == 'false' && inputs.scan_image_enabled && ( github.ref_type != 'tag' || steps.check-ref.outputs.has_alpha == 'false' ) }}
+        if: ${{ needs.needs-scan-for-vulnerabilities.outputs.skip == 'false' && inputs.scan_image_enabled && ( github.ref_type != 'tag' || steps.check-ref.outputs.has_alpha == 'false' ) }}
         uses: ibm-skills-network/action-scan-container-image@main
         with:
           image: ${{ inputs.image }}:scan-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
