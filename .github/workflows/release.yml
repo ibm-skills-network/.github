@@ -63,7 +63,22 @@ on:
         required: false
 
 jobs:
+  check-branch:
+    runs-on: ubuntu-latest
+    outputs:
+      skip: ${{ steps.check-branch.outputs.skip }}
+    steps:
+      - id: check-branch
+        run: |
+          if [[ "${{ github.ref }}" =~ ^refs/heads/dependabot.* || "${{ github.ref }}" =~ ^refs/heads/whitesource-remediate.* ]]; then
+            echo "skip=true" >> $GITHUB_ENV
+          else
+            echo "skip=false" >> $GITHUB_ENV
+          fi
+
   build:
+    needs: check-branch
+    if: needs.check-branch.outputs.skip == 'false'
     name: docker image
     runs-on: ubuntu-latest
     steps:
