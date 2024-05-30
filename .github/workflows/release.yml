@@ -70,7 +70,9 @@ jobs:
     steps:
       - id: needs-scan-for-vulnerabilities
         run: |
-          if [[ "${{ github.ref }}" =~ ^refs/heads/dependabot.* || "${{ github.ref }}" =~ ^refs/heads/whitesource-remediate.* ]]; then
+          BRANCH_NAME="${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
+          echo "BRANCH_NAME=$BRANCH_NAME"
+          if [[ "$BRANCH_NAME" =~ ^dependabot.* || "$BRANCH_NAME" =~ ^whitesource-remediate.* ]]; then
             echo "skip=true" >> $GITHUB_OUTPUT
           else
             echo "skip=false" >> $GITHUB_OUTPUT
