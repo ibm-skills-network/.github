@@ -5,6 +5,11 @@ on:
   pull_request:
   merge_group:
 
+permissions:
+  pull-requests: write
+  contents: write
+  issues: write
+
 jobs:
   dependabot:
     name: Auto-Merge Dependabot PR
