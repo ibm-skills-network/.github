@@ -1,7 +1,9 @@
+# This workflow is required and run as part of an org-wide ruleset
+
 name: Dependency Auto-Merge
 on:
-  workflow_call:
   pull_request:
+  merge_group:
 
 jobs:
   dependabot:
