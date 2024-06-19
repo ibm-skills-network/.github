@@ -47,7 +47,7 @@ on:
       builder_parallelism:
         description: "Set the number of parallel builds to run"
         required: false
-        default: 4
+        default: 6
         type: number
     secrets:
       GH_TOKEN:
@@ -149,7 +149,7 @@ jobs:
         with:
           buildkitd-config-inline: |
             [worker.oci]
-              max-parallelism = 1
+              max-parallelism = ${{ inputs.builder_parallelism }}
 
       - name: Login to Global ICR
         uses: docker/login-action@v3
