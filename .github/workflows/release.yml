@@ -47,7 +47,7 @@ on:
       builder_parallelism:
         description: "Set the number of parallel builds to run"
         required: false
-        default: 6
+        default: 0
         type: number
     secrets:
       GH_TOKEN:
