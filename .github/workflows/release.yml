@@ -49,6 +49,11 @@ on:
         required: false
         default: 0
         type: number
+      submodules:
+        description: "How to handle submodules in checkout (recursive, true, or false)"
+        required: false
+        type: string
+        default: "recursive"
     secrets:
       GH_TOKEN:
         required: false
@@ -135,13 +140,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
-          submodules: recursive
+          submodules: ${{ inputs.submodules }}
           ref: ${{ steps.latest-release.outputs.tag_name }}
         if: ${{ github.event_name == 'schedule' }}
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
-          submodules: recursive
+          submodules: ${{ inputs.submodules }}
         if: ${{ github.event_name != 'schedule' }}
 
       - name: Set up Docker Buildx
