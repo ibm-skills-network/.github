@@ -177,7 +177,6 @@ jobs:
           tags: |
             type=semver,pattern={{version}}
             type=schedule,pattern=${{ steps.base-release.outputs.base-release }}-{{date 'YYYYMMDD'}}
-            type=schedule,pattern=${{ steps.base-release.outputs.base-release }},enable=${{ github.event_name == 'schedule' }}
             type=raw,value=manual,suffix=${{ github.event.inputs.suffix }},enable=${{ github.event_name == 'workflow_dispatch' }}
 
       - name: Should we cache
