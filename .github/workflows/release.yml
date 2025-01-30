@@ -72,6 +72,10 @@ on:
       CONTAINER_IMAGE_SCAN_RESULT_COS_API_KEY:
         required: false
 
+concurrency:
+  group: ${{ github.ref_name != 'main' && github.ref_name != 'master' && format('build-{0}', github.ref_name) }}
+  cancel-in-progress: ${{ github.ref_name != 'main' && github.ref_name != 'master' }}
+
 jobs:
   needs-scan-for-vulnerabilities:
     runs-on: ubuntu-latest
