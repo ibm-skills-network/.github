@@ -199,7 +199,10 @@ jobs:
           echo "${{ secrets.ROOT_CA_CERTIFICATE_BASE64 }}" | base64 -d > rootCA.crt
 
       - name: Build and push image to scan
-        if: ${{ needs.needs-scan-for-vulnerabilities.outputs.skip == 'false' && inputs.scan_image_enabled && ( github.ref_type != 'tag' || steps.check-ref.outputs.has_alpha == 'false' ) }}
+        if: ${{ needs.needs-scan-for-vulnerabilities.outputs.skip == 'false' &&
+               inputs.scan_image_enabled &&
+               ( github.ref_type != 'tag' || steps.check-ref.outputs.has_alpha == 'false' ) &&
+               github.event.repository.visibility != 'public' }}
         uses: docker/build-push-action@v5
         with:
           # If your Dockerfile is not present in the root directory
@@ -222,7 +225,10 @@ jobs:
             SN_GITHUB_NPM_REGISTRY=https://npm.pkg.github.com
 
       - name: Scan image
-        if: ${{ needs.needs-scan-for-vulnerabilities.outputs.skip == 'false' && inputs.scan_image_enabled && ( github.ref_type != 'tag' || steps.check-ref.outputs.has_alpha == 'false' ) }}
+        if: ${{ needs.needs-scan-for-vulnerabilities.outputs.skip == 'false' &&
+               inputs.scan_image_enabled &&
+               ( github.ref_type != 'tag' || steps.check-ref.outputs.has_alpha == 'false' ) &&
+               github.event.repository.visibility != 'public' }}
         uses: ibm-skills-network/action-scan-container-image@main
         with:
           image: ${{ inputs.image }}:scan-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
