@@ -135,6 +135,14 @@ jobs:
           echo "${{ steps.base-release.outputs.base-release }}"
         if: ${{ github.event_name == 'schedule' }}
 
+      - name: Set up SSH for private submodule access
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SUBMODULE_DEPLOY_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+        shell: bash
+
       # If this is a scheduled (nightly) build use latest release tag
       # Otherwise use referenced/default branch/tag
       - uses: actions/checkout@v4
