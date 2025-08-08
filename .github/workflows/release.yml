@@ -226,8 +226,7 @@ jobs:
         uses: ibm-skills-network/action-scan-container-image@main
         with:
           image: ${{ inputs.image }}:scan-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
-          travis_api_token: ${{ secrets.TRAVIS_API_TOKEN }}
-          image_scan_result_cos_api_token: ${{ secrets.CONTAINER_IMAGE_SCAN_RESULT_COS_API_KEY }}
+          image_scan_cos_sps_toolchain_api_token: ${{ secrets.CONTAINER_IMAGE_SCAN_RESULT_COS_API_KEY }}
           fail_if_overdue: ${{ inputs.scan_fail_if_overdue }}
 
       - name: Check image exist on ICR
