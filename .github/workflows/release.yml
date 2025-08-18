@@ -44,6 +44,11 @@ on:
         required: false
         type: boolean
         default: false
+      maximize_free_space_extreme:
+        description: "Set to true to maximize space on github workflow runners (extreme)"
+        required: false
+        type: boolean
+        default: false
       builder_parallelism:
         description: "Set the number of parallel builds to run"
         required: false
@@ -111,7 +116,19 @@ jobs:
           large-packages: true
           docker-images: true
           swap-storage: false
-        if: ${{ inputs.maximize_free_space }}
+        if: ${{ inputs.maximize_free_space && !inputs.maximize_free_space_extreme }}
+
+      - name: Maximize free space on runner (extreme)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          dotnet: true
+          android: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+          tool-cache: true
+        if: ${{ inputs.maximize_free_space && inputs.maximize_free_space_extreme }}
 
       - name: Get latest release tag
         id: latest-release
