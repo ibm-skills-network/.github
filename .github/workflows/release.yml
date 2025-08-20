@@ -126,7 +126,7 @@ jobs:
           haskell: true
           large-packages: true
           docker-images: true
-          swap-storage: true
+          swap-storage: false
           tool-cache: true
         if: ${{ inputs.maximize_free_space && inputs.maximize_free_space_extreme }}
 
