@@ -77,6 +77,10 @@ on:
       CONTAINER_IMAGE_SCAN_RESULT_COS_API_KEY:
         required: false
 
+concurrency:
+  group: sn-twistlock-scan
+  cancel-in-progress: false
+
 jobs:
   needs-scan-for-vulnerabilities:
     runs-on: ubuntu-latest
@@ -241,7 +245,7 @@ jobs:
 
       - name: Scan image
         if: ${{ needs.needs-scan-for-vulnerabilities.outputs.skip == 'false' && inputs.scan_image_enabled && ( github.ref_type != 'tag' || steps.check-ref.outputs.has_alpha == 'false' ) }}
-        uses: ibm-skills-network/action-scan-container-image@main
+        uses: ibm-skills-network/action-scan-container-image@work-branchs
         with:
           image: ${{ inputs.image }}:scan-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           image_scan_cos_sps_toolchain_api_token: ${{ secrets.CONTAINER_IMAGE_SCAN_RESULT_COS_API_KEY }}
