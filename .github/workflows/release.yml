@@ -216,36 +216,36 @@ jobs:
           echo "${{ secrets.ROOT_CA_CERTIFICATE_BASE64 }}" | base64 -d > rootCA.crt
 
       # TODO: Re enable when Twistlock is back up
-      # - name: Build and push image to scan
-      #   if: ${{ needs.needs-scan-for-vulnerabilities.outputs.skip == 'false' && inputs.scan_image_enabled && ( github.ref_type != 'tag' || steps.check-ref.outputs.has_alpha == 'false' ) }}
-      #   uses: docker/build-push-action@v5
-      #   with:
-      #     # If your Dockerfile is not present in the root directory
-      #     # change it to the correct subdirectory name
-      #     context: ${{ inputs.docker_context }}
-      #     file: ${{ inputs.docker_file }}
-      #     target: ${{ inputs.docker_target }}
-      #     push: true
-      #     tags: ${{ inputs.image }}:scan-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
-      #     labels: ${{ steps.meta.outputs.labels }}
-      #     cache-from: ${{ steps.should-cache.outputs.cache-from }}
-      #     cache-to: ${{ steps.should-cache.outputs.cache-to }}
-      #     secrets: |
-      #       "oban_key_fingerprint=${{ secrets.OBAN_KEY_FINGERPRINT }}"
-      #       "oban_license_key=${{ secrets.OBAN_LICENSE_KEY }}"
-      #       "IBM_CLOUD_API_KEY=${{ secrets.IBM_CLOUD_API_KEY }}"
-      #       ${{ inputs.docker_secrets }}
-      #     build-args: |-
-      #       SN_GITHUB_NPM_TOKEN=${{ secrets.GHEC_NPM_REGISTRY_TOKEN }}
-      #       SN_GITHUB_NPM_REGISTRY=https://npm.pkg.github.com
+      - name: Build and push image to scan
+        if: ${{ needs.needs-scan-for-vulnerabilities.outputs.skip == 'false' && inputs.scan_image_enabled && ( github.ref_type != 'tag' || steps.check-ref.outputs.has_alpha == 'false' ) }}
+        uses: docker/build-push-action@v5
+        with:
+          # If your Dockerfile is not present in the root directory
+          # change it to the correct subdirectory name
+          context: ${{ inputs.docker_context }}
+          file: ${{ inputs.docker_file }}
+          target: ${{ inputs.docker_target }}
+          push: true
+          tags: ${{ inputs.image }}:scan-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: ${{ steps.should-cache.outputs.cache-from }}
+          cache-to: ${{ steps.should-cache.outputs.cache-to }}
+          secrets: |
+            "oban_key_fingerprint=${{ secrets.OBAN_KEY_FINGERPRINT }}"
+            "oban_license_key=${{ secrets.OBAN_LICENSE_KEY }}"
+            "IBM_CLOUD_API_KEY=${{ secrets.IBM_CLOUD_API_KEY }}"
+            ${{ inputs.docker_secrets }}
+          build-args: |-
+            SN_GITHUB_NPM_TOKEN=${{ secrets.GHEC_NPM_REGISTRY_TOKEN }}
+            SN_GITHUB_NPM_REGISTRY=https://npm.pkg.github.com
 
-      # - name: Scan image
-      #   if: ${{ needs.needs-scan-for-vulnerabilities.outputs.skip == 'false' && inputs.scan_image_enabled && ( github.ref_type != 'tag' || steps.check-ref.outputs.has_alpha == 'false' ) }}
-      #   uses: ibm-skills-network/action-scan-container-image@main
-      #   with:
-      #     image: ${{ inputs.image }}:scan-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
-      #     image_scan_cos_sps_toolchain_api_token: ${{ secrets.CONTAINER_IMAGE_SCAN_RESULT_COS_API_KEY }}
-      #     fail_if_overdue: ${{ inputs.scan_fail_if_overdue }}
+      - name: Scan image
+        if: ${{ needs.needs-scan-for-vulnerabilities.outputs.skip == 'false' && inputs.scan_image_enabled && ( github.ref_type != 'tag' || steps.check-ref.outputs.has_alpha == 'false' ) }}
+        uses: ibm-skills-network/action-scan-container-image@work-branchs
+        with:
+          image: ${{ inputs.image }}:scan-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          image_scan_cos_sps_toolchain_api_token: ${{ secrets.CONTAINER_IMAGE_SCAN_RESULT_COS_API_KEY }}
+          fail_if_overdue: ${{ inputs.scan_fail_if_overdue }}
 
       - name: Check image exist on ICR
         id: check-image
