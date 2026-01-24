@@ -59,6 +59,11 @@ on:
         required: false
         type: string
         default: "recursive"
+      run_repo_tests:
+        description: "Set to true if your repo has .github/workflows/test-docker.yml"
+        required: false
+        type: boolean
+        default: false
     secrets:
       GH_TOKEN:
         required: false
@@ -291,6 +296,13 @@ jobs:
             SN_GITHUB_NPM_TOKEN=${{ secrets.GHEC_NPM_REGISTRY_TOKEN }}
             SN_GITHUB_NPM_REGISTRY=https://npm.pkg.github.com
         if: env.IMAGE_EXISTS == 'false'
+
+      - name: run tests
+        if: ${{ inputs.run_repo_tests }}
+        uses: ./.github/workflows/test-docker.yml
+        with:
+          image: ${{ needs.build.outputs.test_image }}
+          secrets: inherit
 
       - uses: sigstore/cosign-installer@main
         if: ${{ inputs.push }}
