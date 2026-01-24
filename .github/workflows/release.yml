@@ -301,8 +301,7 @@ jobs:
         if: ${{ inputs.run_repo_tests }}
         uses: ./.github/workflows/test-docker
         with:
-          image: ${{ needs.build.outputs.test_image }}
-          secrets: inherit
+          image: ${{ inputs.image }}:${{ steps.meta.outputs.version }}
 
       - uses: sigstore/cosign-installer@main
         if: ${{ inputs.push }}
