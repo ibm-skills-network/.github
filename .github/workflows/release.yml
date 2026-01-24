@@ -299,7 +299,7 @@ jobs:
 
       - name: run tests
         if: ${{ inputs.run_repo_tests }}
-        uses: ./.github/workflows/test-docker.yml
+        uses: ./.github/workflows/test-docker
         with:
           image: ${{ needs.build.outputs.test_image }}
           secrets: inherit
