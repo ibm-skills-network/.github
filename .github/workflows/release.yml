@@ -200,6 +200,7 @@ jobs:
             type=semver,pattern={{version}}
             type=schedule,pattern=${{ steps.base-release.outputs.base-release }}-{{date 'YYYYMMDD'}}
             type=raw,value=manual,suffix=${{ github.event.inputs.suffix }},enable=${{ github.event_name == 'workflow_dispatch' }}
+            type=ref,event=pr
 
       - name: Should we cache
         id: should-cache
@@ -273,7 +274,7 @@ jobs:
         env:
           IMAGE_EXISTS: ${{ env.IMAGE_EXISTS }}
 
-      - name: Build and push
+      - name: Build
         id: build-push
         uses: docker/build-push-action@v5
         with:
@@ -283,7 +284,7 @@ jobs:
           file: ${{ inputs.docker_file }}
           target: ${{ inputs.docker_target }}
           load: true
-          push: ${{ inputs.push }}
+          push: false
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: ${{ steps.should-cache.outputs.cache-from }}
@@ -302,7 +303,11 @@ jobs:
         if: ${{ inputs.run_repo_tests && env.IMAGE_EXISTS == 'false' }}
         uses: ./.github/workflows/test-docker
         with:
-          image: ${{ inputs.image }}:${{ steps.meta.outputs.version }}
+          image: ${{ steps.meta.outputs.tags }}
+      
+      - name: Push image
+        if: ${{ inputs.push && env.IMAGE_EXISTS == 'false' }}
+        run: docker push ${{ steps.meta.outputs.tags }}
 
       - uses: sigstore/cosign-installer@main
         if: ${{ inputs.push }}
