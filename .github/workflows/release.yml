@@ -81,6 +81,8 @@ on:
         required: false
       CONTAINER_IMAGE_SCAN_RESULT_COS_API_KEY:
         required: false
+      IBM_CLOUD_API_KEY:
+        required: false
 
 jobs:
   needs-scan-for-vulnerabilities:
