@@ -102,6 +102,10 @@ jobs:
     needs: needs-scan-for-vulnerabilities
     name: docker image
     runs-on: ubuntu-latest
+    outputs:
+      tags: ${{ steps.meta.outputs.tags }}
+      image_exists: ${{ steps.check-image.outputs.image_exists }}
+      digest: ${{ steps.build-push.outputs.digest }}
     steps:
       - name: Check if tag is a non-production release (e.g. 1.2.3-dev.0, 1.2.3-rc.0)
         id: check-ref
@@ -299,12 +303,17 @@ jobs:
             SN_GITHUB_NPM_REGISTRY=https://npm.pkg.github.com
         if: env.IMAGE_EXISTS == 'false'
 
-      - name: run tests
-        if: ${{ inputs.run_repo_tests && env.IMAGE_EXISTS == 'false' }}
-        uses: ./.github/workflows/test-docker
-        with:
-          image: ${{ steps.meta.outputs.tags }}
-      
+  test:
+    needs: build
+    if: ${{ inputs.run_repo_tests && needs.build.outputs.image_exists == 'false' }}
+    uses: ./.github/workflows/test-docker.yml
+    with:
+      image: ${{ needs.build.outputs.tags }}
+    secrets: inherit
+
+  push:
+    runs-on: ubuntu-latest
+    steps:
       - name: Push image
         if: ${{ inputs.push && env.IMAGE_EXISTS == 'false' }}
         run: docker push ${{ steps.meta.outputs.tags }}
