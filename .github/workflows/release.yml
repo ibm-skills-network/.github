@@ -59,8 +59,8 @@ on:
         required: false
         type: string
         default: "recursive"
-      run_repo_tests:
-        description: "Set to true if your repo has .github/workflows/test-docker.yml"
+      test_container_image:
+        description: "Set to true if your repo has .github/workflows/test_container_image/action.yml"
         required: false
         type: boolean
         default: false
@@ -301,9 +301,9 @@ jobs:
             SN_GITHUB_NPM_REGISTRY=https://npm.pkg.github.com
         if: env.IMAGE_EXISTS == 'false'
 
-      - name: run tests
-        if: ${{ inputs.run_repo_tests && env.IMAGE_EXISTS == 'false' }}
-        uses: ./.github/workflows/test-docker
+      - name: run container test
+        if: ${{ inputs.test_container_image && env.IMAGE_EXISTS == 'false' }}
+        uses: ./.github/workflows/test_container_image
         with:
           image: ${{ steps.meta.outputs.tags }}
           ibm-cloud-api-key: ${{ secrets.IBM_CLOUD_API_KEY }}
