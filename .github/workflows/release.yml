@@ -310,8 +310,12 @@ jobs:
 
       
       - name: Push image
+        id: push-image
         if: ${{ inputs.push && env.IMAGE_EXISTS == 'false' }}
-        run: docker push ${{ steps.meta.outputs.tags }}
+        run: |
+          docker push ${{ steps.meta.outputs.tags }}
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ${{ steps.meta.outputs.tags }} | cut -d'@' -f2)
+          echo "digest=$DIGEST" >> $GITHUB_OUTPUT
 
       - uses: sigstore/cosign-installer@main
         if: ${{ inputs.push }}
@@ -327,6 +331,6 @@ jobs:
             -a "repo=${{ github.repository }}" \
             -a "workflow=${{ github.workflow }}" \
             -a "ref=${{ github.sha }}" \
-            ${{ inputs.image }}@${{ steps.build-push.outputs.digest }}
+            ${{ inputs.image }}@${{ steps.push-image.outputs.digest }}
         env:
           COSIGN_PASSWORD: ${{ secrets.CONTAINER_IMAGE_SIGNING_PASSWORD }}
