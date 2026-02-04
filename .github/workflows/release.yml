@@ -276,7 +276,7 @@ jobs:
         env:
           IMAGE_EXISTS: ${{ env.IMAGE_EXISTS }}
 
-      - name: Build
+      - name: Build and push
         id: build-push
         uses: docker/build-push-action@v5
         with:
@@ -285,8 +285,8 @@ jobs:
           context: ${{ inputs.docker_context }}
           file: ${{ inputs.docker_file }}
           target: ${{ inputs.docker_target }}
-          load: true
-          push: false
+          load: ${{ inputs.test_container_image }} # Images will be loaded when you run container test 
+          push: ${{ !inputs.test_container_image && inputs.push }} # If you are testing, pushing will happen after your test
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: ${{ steps.should-cache.outputs.cache-from }}
@@ -308,14 +308,28 @@ jobs:
           image: ${{ steps.meta.outputs.tags }}
           ibm-cloud-api-key: ${{ secrets.IBM_CLOUD_API_KEY }}
 
-      
-      - name: Push image
+      # This action is triggered if you are testing you image
+      - name: Push tested image 
         id: push-image
-        if: ${{ inputs.push && env.IMAGE_EXISTS == 'false' }}
-        run: |
-          docker push ${{ steps.meta.outputs.tags }}
-          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ${{ steps.meta.outputs.tags }} | cut -d'@' -f2)
-          echo "digest=$DIGEST" >> $GITHUB_OUTPUT
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ inputs.docker_context }}
+          file: ${{ inputs.docker_file }}
+          target: ${{ inputs.docker_target }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: ${{ steps.should-cache.outputs.cache-from }}
+          cache-to: ${{ steps.should-cache.outputs.cache-to }}
+          secrets: |
+            "oban_key_fingerprint=${{ secrets.OBAN_KEY_FINGERPRINT }}"
+            "oban_license_key=${{ secrets.OBAN_LICENSE_KEY }}"
+            "IBM_CLOUD_API_KEY=${{ secrets.IBM_CLOUD_API_KEY }}"
+            ${{ inputs.docker_secrets }}
+          build-args: |-
+            SN_GITHUB_NPM_TOKEN=${{ secrets.GHEC_NPM_REGISTRY_TOKEN }}
+            SN_GITHUB_NPM_REGISTRY=https://npm.pkg.github.com
+        if: ${{ inputs.test_container_image && inputs.push }}
 
       - uses: sigstore/cosign-installer@main
         if: ${{ inputs.push }}
@@ -331,6 +345,6 @@ jobs:
             -a "repo=${{ github.repository }}" \
             -a "workflow=${{ github.workflow }}" \
             -a "ref=${{ github.sha }}" \
-            ${{ inputs.image }}@${{ steps.push-image.outputs.digest }}
+            ${{ inputs.image }}@${{ steps.push-image.outputs.digest || steps.build-push.outputs.digest }}
         env:
           COSIGN_PASSWORD: ${{ secrets.CONTAINER_IMAGE_SIGNING_PASSWORD }}
