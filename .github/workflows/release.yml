@@ -202,6 +202,7 @@ jobs:
             type=semver,pattern={{version}}
             type=schedule,pattern=${{ steps.base-release.outputs.base-release }}-{{date 'YYYYMMDD'}}
             type=raw,value=manual,suffix=${{ github.event.inputs.suffix }},enable=${{ github.event_name == 'workflow_dispatch' }}
+            type=ref,event=pr
 
       - name: Should we cache
         id: should-cache
