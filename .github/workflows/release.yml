@@ -59,6 +59,11 @@ on:
         required: false
         type: string
         default: "recursive"
+      test_container_image:
+        description: "Set to true if your repo has .github/workflows/test_container_image/action.yml"
+        required: false
+        type: boolean
+        default: false
     secrets:
       GH_TOKEN:
         required: false
@@ -75,6 +80,8 @@ on:
       TRAVIS_API_TOKEN:
         required: false
       CONTAINER_IMAGE_SCAN_RESULT_COS_API_KEY:
+        required: false
+      IBM_CLOUD_API_KEY:
         required: false
 
 jobs:
@@ -195,6 +202,7 @@ jobs:
             type=semver,pattern={{version}}
             type=schedule,pattern=${{ steps.base-release.outputs.base-release }}-{{date 'YYYYMMDD'}}
             type=raw,value=manual,suffix=${{ github.event.inputs.suffix }},enable=${{ github.event_name == 'workflow_dispatch' }}
+            type=ref,event=pr
 
       - name: Should we cache
         id: should-cache
@@ -277,7 +285,8 @@ jobs:
           context: ${{ inputs.docker_context }}
           file: ${{ inputs.docker_file }}
           target: ${{ inputs.docker_target }}
-          push: ${{ inputs.push }}
+          load: ${{ inputs.test_container_image }} # Images will be loaded when you run container test 
+          push: ${{ !inputs.test_container_image && inputs.push }} # If you are testing, pushing will happen after your test
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: ${{ steps.should-cache.outputs.cache-from }}
@@ -291,6 +300,36 @@ jobs:
             SN_GITHUB_NPM_TOKEN=${{ secrets.GHEC_NPM_REGISTRY_TOKEN }}
             SN_GITHUB_NPM_REGISTRY=https://npm.pkg.github.com
         if: env.IMAGE_EXISTS == 'false'
+
+      - name: run container test
+        if: ${{ inputs.test_container_image && env.IMAGE_EXISTS == 'false' }}
+        uses: ./.github/workflows/test_container_image
+        with:
+          image: ${{ steps.meta.outputs.tags }}
+          ibm-cloud-api-key: ${{ secrets.IBM_CLOUD_API_KEY }}
+
+      # This action is triggered if you are testing you image
+      - name: Push tested image 
+        id: push-image
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ inputs.docker_context }}
+          file: ${{ inputs.docker_file }}
+          target: ${{ inputs.docker_target }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: ${{ steps.should-cache.outputs.cache-from }}
+          cache-to: ${{ steps.should-cache.outputs.cache-to }}
+          secrets: |
+            "oban_key_fingerprint=${{ secrets.OBAN_KEY_FINGERPRINT }}"
+            "oban_license_key=${{ secrets.OBAN_LICENSE_KEY }}"
+            "IBM_CLOUD_API_KEY=${{ secrets.IBM_CLOUD_API_KEY }}"
+            ${{ inputs.docker_secrets }}
+          build-args: |-
+            SN_GITHUB_NPM_TOKEN=${{ secrets.GHEC_NPM_REGISTRY_TOKEN }}
+            SN_GITHUB_NPM_REGISTRY=https://npm.pkg.github.com
+        if: ${{ inputs.test_container_image && inputs.push }}
 
       - uses: sigstore/cosign-installer@main
         if: ${{ inputs.push }}
@@ -306,6 +345,6 @@ jobs:
             -a "repo=${{ github.repository }}" \
             -a "workflow=${{ github.workflow }}" \
             -a "ref=${{ github.sha }}" \
-            ${{ inputs.image }}@${{ steps.build-push.outputs.digest }}
+            ${{ inputs.image }}@${{ steps.push-image.outputs.digest || steps.build-push.outputs.digest }}
         env:
           COSIGN_PASSWORD: ${{ secrets.CONTAINER_IMAGE_SIGNING_PASSWORD }}
