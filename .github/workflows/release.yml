@@ -305,7 +305,7 @@ jobs:
         if: ${{ inputs.test_container_image && env.IMAGE_EXISTS == 'false' }}
         uses: ./.github/workflows/test_container_image
         with:
-          image: ${{ steps.meta.outputs.tags }}
+          image: ${{ steps.build-push.outputs.imageid }}
           ibm-cloud-api-key: ${{ secrets.IBM_CLOUD_API_KEY }}
 
       # This action is triggered if you are testing you image
