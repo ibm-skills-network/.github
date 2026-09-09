@@ -1,0 +1,83 @@
+# Makes sure every repo has the SKILLS- autolink, so typing SKILLS-131488 anywhere in a PR,
+# a comment or a commit message comes out as a link to Jira.
+#
+# Autolinks are set per repo, so a brand new repo has none until this runs and gives it one.
+#
+# Needs the SKILLS_NETWORK_BOT app to have Administration: write, and the org variable
+# JIRA_HOST (with the scheme) visible to this repo.
+name: Reconcile Jira autolinks
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create GitHub App token
+        id: getGitHubToken
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.SKILLS_NETWORK_BOT_APP_ID }}
+          private-key: ${{ secrets.SKILLS_NETWORK_BOT_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      - name: Point the SKILLS- autolink at Jira on every repository
+        env:
+          GH_TOKEN: ${{ steps.getGitHubToken.outputs.token }}
+          OWNER: ${{ github.repository_owner }}
+          JIRA_HOST: ${{ vars.JIRA_HOST }}
+        run: |
+          set -euo pipefail
+          if [ -z "$JIRA_HOST" ]; then
+            echo "::error::The JIRA_HOST variable is not visible to this repository."; exit 1
+          fi
+          TEMPLATE="$JIRA_HOST/browse/SKILLS-<num>"
+          # Skip archived repos. No PRs there, so nothing would ever render the link.
+          gh api "orgs/$OWNER/repos" --paginate \
+            --jq '.[] | select(.archived == false) | .name' > /tmp/repos.txt
+          echo "Checking $(wc -l < /tmp/repos.txt) active repositories."
+
+          missing=0; added=0; failed=0
+          while read -r repo; do
+            links=$(gh api "repos/$OWNER/$repo/autolinks") || {
+              echo "?? $repo (could not read autolinks)"; failed=$((failed+1)); continue; }
+
+            # An autolink pointing at the wrong place is just as broken as no autolink, so
+            # the template has to match too, not only the prefix.
+            correct=$(printf '%s' "$links" | jq --arg t "$TEMPLATE" \
+                        '[.[] | select(.key_prefix == "SKILLS-" and .url_template == $t)] | length')
+            if [ "$correct" != "0" ]; then continue; fi
+
+            missing=$((missing+1))
+            # A prefix can only be registered once. A wrong SKILLS- one has to be deleted
+            # first or GitHub refuses the right one.
+            stale=$(printf '%s' "$links" | jq -r --arg t "$TEMPLATE" \
+                      '.[] | select(.key_prefix == "SKILLS-" and .url_template != $t) | .id')
+            # Keep what the API said. A failed run is red and shows nothing but repo names
+            # otherwise, and lost Administration: write, a rejected template and rate
+            # limiting all look the same from there. tr because a warning is one line.
+            for id in $stale; do
+              err=$(gh api -X DELETE "repos/$OWNER/$repo/autolinks/$id" 2>&1 >/dev/null | tr '\n\r' '  ') || \
+                echo "::warning::could not remove the wrong SKILLS- autolink from $repo: $err"
+            done
+
+            if err=$(gh api -X POST "repos/$OWNER/$repo/autolinks" \
+                       -f key_prefix='SKILLS-' -f url_template="$TEMPLATE" \
+                       -F is_alphanumeric=false 2>&1 >/dev/null | tr '\n\r' '  '); then
+              echo "added: $repo"; added=$((added+1))
+            else
+              echo "::warning::could not add the autolink to $repo: $err"; failed=$((failed+1))
+            fi
+          done < /tmp/repos.txt
+
+          tally="Missing: $missing. Added: $added. Failed: $failed."
+          echo "$tally" >> "$GITHUB_STEP_SUMMARY"
+          echo "$tally"
+          # Everything above only warns. Without this, a nightly run goes green even when
+          # every single repo failed, say because the app lost Administration: write.
+          if [ "$failed" -gt 0 ]; then
+            exit 1
+          fi
