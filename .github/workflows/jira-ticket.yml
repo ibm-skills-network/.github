@@ -55,7 +55,7 @@ jobs:
         env:
           BODY: ${{ github.event.pull_request.body }}
           JIRA_HOST: ${{ vars.JIRA_HOST }}
-          JIRA_AUTH_API_TOKEN: ${{ secrets.JIRA_AUTH_API_TOKEN }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
         run: |
           set -euo pipefail
           # Strip HTML comments first because PR templates may hide example keys in them. 
@@ -75,13 +75,13 @@ jobs:
           fi
           echo "Found $key in the description."
 
-          if [ -z "$JIRA_HOST" ] || [ -z "$JIRA_AUTH_API_TOKEN" ]; then
-            echo "::error::The JIRA_HOST variable or the JIRA_AUTH_API_TOKEN secret is not visible to $REPO. Widen their visibility in the organization settings."
+          if [ -z "$JIRA_HOST" ] || [ -z "$JIRA_API_TOKEN" ]; then
+            echo "::error::The JIRA_HOST variable or the JIRA_API_TOKEN secret is not visible to $REPO. Widen their visibility in the organization settings."
             exit 1
           fi
 
           code=$(curl -sS --max-time 20 -o /tmp/issue.json -w '%{http_code}' \
-            -H "Authorization: Bearer $JIRA_AUTH_API_TOKEN" \
+            -H "Authorization: Bearer $JIRA_API_TOKEN" \
             "$JIRA_HOST/rest/api/2/issue/$key?fields=summary,status") || code=000
           # Jira says 404 for a key that does not exist and for one this token is not allowed to
           # see. It will not tell you which, so the comment we leave names both. Either way the
@@ -170,10 +170,10 @@ jobs:
           KEY: ${{ steps.ticket.outputs.key }}
           TITLE: ${{ github.event.pull_request.title }}
           JIRA_HOST: ${{ vars.JIRA_HOST }}
-          JIRA_AUTH_API_TOKEN: ${{ secrets.JIRA_AUTH_API_TOKEN }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
         run: |
           set -euo pipefail
-          jira() { curl -sS --max-time 20 -H "Authorization: Bearer $JIRA_AUTH_API_TOKEN" \
+          jira() { curl -sS --max-time 20 -H "Authorization: Bearer $JIRA_API_TOKEN" \
                      -H "Content-Type: application/json" "$@"; }
 
           # The work issue, plus any Review sub-task under it. The sub-task is the reviewer's
