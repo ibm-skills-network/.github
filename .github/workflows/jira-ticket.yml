@@ -1,0 +1,218 @@
+# Big gotcha: a ruleset-run workflow only ever gets opened, synchronize and reopened. It
+# ignores any `types:` you write. So editing the description does NOT re-run this. You have to
+# push a commit, or close and reopen. And nothing here can run at merge time.
+name: Jira Ticket
+
+on:
+  pull_request:
+  merge_group:
+
+# One run at a time per PR. Two events landing together would both see "no comment yet" and
+# both leave a comment.
+concurrency:
+  group: jira-ticket-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  pull-requests: write
+  issues: write # Adding a label the repo does not have yet creates it, and making labels needs Issues.
+
+jobs:
+  jira-ticket:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      REPO: ${{ github.repository }}
+      PR: ${{ github.event.pull_request.number }}
+      PR_URL: ${{ github.event.pull_request.html_url }}
+      # This marker lets us find bot comments in the future, so we edit the one we left instead of adding another.
+      MARKER: '<!-- jira-ticket-check -->'
+    steps:
+      - name: Decide whether the gate applies
+        id: scope
+        env:
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: |
+          set -euo pipefail
+          # Only the two bots that raise dependency PRs skip the gate. Matching on
+          # user.type == "Bot" would wave through any bot that ever opens a PR here.
+          case "$AUTHOR" in
+            'ibm-mend-app[bot]'|'dependabot[bot]')
+              echo "Exempt: $AUTHOR raises dependency PRs."
+              echo "exempt=true" >> "$GITHUB_OUTPUT" ;;
+            *)
+              echo "exempt=false" >> "$GITHUB_OUTPUT" ;;
+          esac
+
+      #   linked=true    key is there and Jira agrees (or we could not reach Jira to ask)
+      #   linked=false   no key, or Jira says it does not exist. `problem` says which.
+      #   verified=true  Jira handed us the issue, so it is safe to write to
+      - name: Resolve the ticket
+        id: ticket
+        if: steps.scope.outputs.exempt == 'false'
+        env:
+          BODY: ${{ github.event.pull_request.body }}
+          JIRA_HOST: ${{ vars.JIRA_HOST }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          # Strip HTML comments first because PR templates may hide example keys in them. 
+          # Upper-case the match, because Jira keys are case-sensitive.
+          key=$(printf '%s' "${BODY:-}" | perl -0777 -ne '
+            s/<!--.*?-->//gs;
+            print uc($1) if /^[ \t]*jira:[ \t]*(SKILLS-[0-9]+)/mi or /(SKILLS-[0-9]+)/i;
+          ')
+          echo "key=$key" >> "$GITHUB_OUTPUT"
+          echo "verified=false" >> "$GITHUB_OUTPUT"
+
+          if [ -z "$key" ]; then
+            echo "linked=false" >> "$GITHUB_OUTPUT"
+            echo "problem=This pull request names no Jira ticket. Add a \`Jira: SKILLS-nnnnnn\` line to the description." >> "$GITHUB_OUTPUT"
+            echo "No SKILLS-nnnnnn key in the description."
+            exit 0
+          fi
+          echo "Found $key in the description."
+
+          if [ -z "$JIRA_HOST" ] || [ -z "$JIRA_API_TOKEN" ]; then
+            echo "::error::The JIRA_HOST variable or the JIRA_API_TOKEN secret is not visible to $REPO. Widen their visibility in the organization settings."
+            exit 1
+          fi
+
+          code=$(curl -sS --max-time 20 -o /tmp/issue.json -w '%{http_code}' \
+            -H "Authorization: Bearer $JIRA_API_TOKEN" \
+            "$JIRA_HOST/rest/api/2/issue/$key?fields=summary,status") || code=000
+          # Jira says 404 for a key that does not exist and for one this token is not allowed to
+          # see. It will not tell you which, so the comment we leave names both. Either way the
+          # author can do something about it, which is why this blocks and an unreachable Jira
+          # does not.
+          if [ "$code" = "404" ]; then
+            echo "linked=false" >> "$GITHUB_OUTPUT"
+            echo "problem=Jira has no \`$key\` this check can see. Look for a typo in the key. If the key is right, the ticket is restricted and this check cannot read it." >> "$GITHUB_OUTPUT"
+            echo "$key is absent from Jira or restricted from this token."
+            exit 0
+          fi
+          if [ "$code" != "200" ]; then
+            echo "linked=true" >> "$GITHUB_OUTPUT"
+            echo "::warning::Could not verify $key (HTTP $code from $JIRA_HOST). Accepting it unverified."
+            exit 0
+          fi
+
+          echo "linked=true" >> "$GITHUB_OUTPUT"
+          echo "verified=true" >> "$GITHUB_OUTPUT"
+          # Squash newlines. A summary spanning lines would break the Markdown line below.
+          summary=$(jq -r '.fields.summary' /tmp/issue.json | tr '\n\r' '  ')
+          status=$(jq -r '.fields.status.name' /tmp/issue.json)
+          echo "$key is \"$summary\" ($status)."
+          echo "Linked **$key** — $summary _($status)_" >> "$GITHUB_STEP_SUMMARY"
+          # Warn, never block. A ticket's status moves in Jira, which fires no PR event, and
+          # this job only runs on open, push and reopen.
+          case "$status" in
+            Approved|Done|Cancelled|Closed|Resolved|Rejected)
+              echo "::warning::$key is already $status. Reopen it, or point this PR at a ticket that is still open." ;;
+          esac
+
+      - name: Label the pull request
+        if: steps.scope.outputs.exempt == 'false'
+        env:
+          LINKED: ${{ steps.ticket.outputs.linked }}
+        run: |
+          set -euo pipefail
+          # Adding a label creates the label it if the repo doesn't already have it. 
+          # Removing one the PR does not carry gives a 404, which is fine and can be ignored
+          add() {
+            gh api -X POST "repos/$REPO/issues/$PR/labels" -f "labels[]=$1" >/dev/null || \
+              echo "::warning::could not add the $1 label"
+          }
+          remove() { gh api -X DELETE "repos/$REPO/issues/$PR/labels/$1" >/dev/null 2>&1 || true; }
+          if [ "$LINKED" = "true" ]; then add jira-linked; remove needs-jira
+          else add needs-jira; remove jira-linked; fi
+
+      - name: Ask for a ticket, or withdraw the ask
+        if: steps.scope.outputs.exempt == 'false'
+        env:
+          SATISFIED: ${{ steps.ticket.outputs.linked }}
+          PROBLEM: ${{ steps.ticket.outputs.problem }}
+        run: |
+          set -euo pipefail
+          our_nag_comment_id=$(gh api "repos/$REPO/issues/$PR/comments" --paginate \
+            --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | contains(env.MARKER))) | .id' \
+            | awk 'NR==1') || our_nag_comment_id=""
+
+          if [ "$SATISFIED" = "true" ]; then
+            # Ticket is there now. Take the nagging comment down.
+            if [ -n "$our_nag_comment_id" ]; then
+              gh api -X DELETE "repos/$REPO/issues/comments/$our_nag_comment_id" &&
+                echo "Removed the request comment." ||
+                echo "::warning::could not remove the request comment"
+            fi
+            exit 0
+          fi
+
+          why="The key renders as a link automatically, and it is what ties the pull request back to the ticket in reporting."
+          rerun="Editing the description does not re-run this check. Once the key is in place, either push a commit OR close and reopen the pull request, and this comment will go away."
+          body=$(printf '%s\n**%s**\n\n    Jira: SKILLS-nnnnnn\n\n%s\n\n%s\n' "$MARKER" "$PROBLEM" "$why" "$rerun")
+
+          if [ -n "$our_nag_comment_id" ]; then
+            gh api -X PATCH "repos/$REPO/issues/comments/$our_nag_comment_id" -f body="$body" >/dev/null &&
+              echo "Updated the existing request comment." ||
+              echo "::warning::could not update the request comment"
+          else
+            gh api -X POST "repos/$REPO/issues/$PR/comments" -f body="$body" >/dev/null &&
+              echo "Asked for a ticket key." ||
+              echo "::warning::could not post the request comment"
+          fi
+
+      - name: Link the pull request from the Jira issue
+        if: steps.ticket.outputs.verified == 'true'
+        env:
+          KEY: ${{ steps.ticket.outputs.key }}
+          TITLE: ${{ github.event.pull_request.title }}
+          JIRA_HOST: ${{ vars.JIRA_HOST }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          jira() { curl -sS --max-time 20 -H "Authorization: Bearer $JIRA_API_TOKEN" \
+                     -H "Content-Type: application/json" "$@"; }
+
+          # The work issue, plus any Review sub-task under it. The sub-task is the reviewer's
+          # own to-do, so the code link belongs there too. Usually there is no sub-task at
+          # all. That is fine, not an error.
+          targets="$KEY"
+          subs=$(jira -G --data-urlencode "jql=parent = $KEY AND issuetype = Approval" \
+                   --data-urlencode 'fields=key' \
+                   "$JIRA_HOST/rest/api/2/search" \
+                 | jq -r '.issues[]?.key' || true)
+          [ -n "$subs" ] && targets="$targets $subs"
+
+          # Remote links upsert on globalId, so firing this on every push is ok,
+          # and a renamed PR just overwrites the old one. Jira says 201 when it made a link,
+          # 200 when it updated one.
+          payload=$(jq -nc --arg url "$PR_URL" --arg title "$REPO#$PR" --arg summary "$TITLE" '{
+            globalId: $url,
+            application: {type: "com.github", name: "GitHub"},
+            relationship: "pull request",
+            object: {url: $url, title: $title, summary: $summary,
+                     icon: {url16x16: "https://github.com/favicon.ico", title: "GitHub"}}
+          }')
+          for t in $targets; do
+            # Jira being down must not fail a PR that named a perfectly good ticket.
+            code=$(jira -o /dev/null -w '%{http_code}' -X POST \
+              "$JIRA_HOST/rest/api/2/issue/$t/remotelink" --data "$payload") || code=000
+            case "$code" in
+              200|201) echo "Linked the pull request from $t." ;;
+              *) echo "::warning::could not link the pull request from $t (HTTP $code)" ;;
+            esac
+          done
+
+      - name: Require a linked ticket
+        if: steps.scope.outputs.exempt == 'false'
+        env:
+          KEY: ${{ steps.ticket.outputs.key }}
+          LINKED: ${{ steps.ticket.outputs.linked }}
+          PROBLEM: ${{ steps.ticket.outputs.problem }}
+        run: |
+          if [ "$LINKED" = "true" ]; then echo "Linked to $KEY."; exit 0; fi
+          echo "::error::$PROBLEM"
+          exit 1
