@@ -1,0 +1,34 @@
+name: Mark pull requests as stale
+
+on:
+  schedule:
+    - cron: '30 6 * * *'
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: Report what would change without changing anything
+        type: boolean
+        default: true
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Create GitHub App token
+        id: getGitHubToken
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.SKILLS_NETWORK_BOT_APP_ID }}
+          private-key: ${{ secrets.SKILLS_NETWORK_BOT_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
+      - name: Sweep every repository
+        env:
+          GH_TOKEN: ${{ steps.getGitHubToken.outputs.token }}
+          OWNER: ${{ github.repository_owner }}
+          DRY_RUN: ${{ inputs.dry-run == true }}
+        run: bash .github/scripts/stale-pull-requests.sh
