@@ -51,3 +51,28 @@ jobs:
         env:
           PR_URL: ${{github.event.pull_request.html_url}}
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+
+  mend-remediation:
+    name: Auto-Merge Mend Remediation PR
+    runs-on: ubuntu-latest
+    # Both conditions are needed. The branch prefix alone is spoofable by anyone with
+    # write access; the author alone would also match a hand-pushed branch from the
+    # same identity. The login lives in an org variable rather than inline because the
+    # remediation tool's identity changes when the escalation agent moves it to a
+    # GitHub App, and that should not mean another pull request against this file.
+    # An unset variable matches nothing, which leaves auto-merge off.
+    if: >-
+      ${{ startsWith(github.event.pull_request.head.ref, 'mend-remediate/')
+          && github.event.pull_request.user.login == vars.MEND_REMEDIATION_ACTOR }}
+    steps:
+      - name: Enable auto-merge
+        # Requires that auto-merge is enabled for the repository
+        run: gh pr merge --auto --squash "$PR_URL"
+        env:
+          PR_URL: ${{github.event.pull_request.html_url}}
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+      - name: Approve PR
+        run: gh pr review --approve "$PR_URL"
+        env:
+          PR_URL: ${{github.event.pull_request.html_url}}
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
