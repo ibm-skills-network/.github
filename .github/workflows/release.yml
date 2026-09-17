@@ -375,7 +375,12 @@ jobs:
         env:
           APP_ID: ${{ secrets.SKILLS_NETWORK_BOT_APP_ID }}
         run: |
-          echo "have=true" >> "$GITHUB_OUTPUT"
+          # The bot credentials are org secrets scoped to private repositories, so a public
+          # repo reads them as empty. Stop quietly rather than fail the token step on every
+          # release there. This is a step because the secrets context is not available to a
+          # job-level if.
+          if [ -n "$APP_ID" ]; then
+            echo "have=true" >> "$GITHUB_OUTPUT"
           else
             echo "have=false" >> "$GITHUB_OUTPUT"
             echo "No bot credentials visible here, so nothing is announced."
