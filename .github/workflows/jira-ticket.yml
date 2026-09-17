@@ -36,11 +36,10 @@ jobs:
           AUTHOR: ${{ github.event.pull_request.user.login }}
         run: |
           set -euo pipefail
-          # Only the two bots that raise dependency PRs skip the gate. Matching on
-          # user.type == "Bot" would wave through any bot that ever opens a PR here.
+          # bots are allowed to open PRs without jira ticket references
           case "$AUTHOR" in
-            'ibm-mend-app[bot]'|'dependabot[bot]')
-              echo "Exempt: $AUTHOR raises dependency PRs."
+            'ibm-mend-app[bot]'|'dependabot[bot]'|'skills-network-bot[bot]')
+              echo "Exempt: $AUTHOR raises automated PRs."
               echo "exempt=true" >> "$GITHUB_OUTPUT" ;;
             *)
               echo "exempt=false" >> "$GITHUB_OUTPUT" ;;
