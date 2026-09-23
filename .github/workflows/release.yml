@@ -64,6 +64,11 @@ on:
         required: false
         type: boolean
         default: false
+      autorelease:
+        description: "Set to false to stop a merge to the default branch from creating a release"
+        required: false
+        type: boolean
+        default: true
     secrets:
       GH_TOKEN:
         required: false
@@ -89,6 +94,340 @@ on:
         required: false
 
 jobs:
+  # Creates a release when a merge to the default branch asks for one.
+  #
+  # Asking is done in the pull request. The organization pull request template has a "Release
+  # Impact" section with four checkboxes: major, minor, patch and no release. Each box carries a
+  # hidden marker like <!-- bump:minor -->, and the ticked marker is what this job reads from the
+  # pull request body after the merge. A tick on major, minor or patch asks for a release of that
+  # size. bump_of() below has the exact rules, including what an unticked section means.
+  #
+  # The version comes from the newest release tag, bumped by the biggest tick merged since it.
+  # This job pushes that tag and stops. The tag push starts a run of this same workflow, and that
+  # run builds and pushes. The tag run creates nothing itself, because a tag is
+  # not the default branch (so no infinite loops). 
+  release:
+    name: create the release
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Only a merge to the default branch can be a release. Every other run (pull requests,
+    # tags, schedules, dispatches) skips this job without taking a runner, and the build sees
+    # an empty output (which means "not tagged").
+    if: github.event_name == 'push' && github.ref_name == github.event.repository.default_branch && inputs.autorelease
+    outputs:
+      # true once a release tag covers this commit, so the build job skips
+      tagged: ${{ steps.release.outputs.tagged }}
+    steps:
+      # The bot credentials are organization secrets scoped to private repositories, so a
+      # public repository reads them as empty. A tag pushed with the default token raises
+      # no push event, so the build would never run and the release would ship nothing.
+      # Build normally instead, and say why. A job-level if cannot read secrets, so this
+      # check has to be a step.
+      - id: gate
+        env:
+          APP_ID: ${{ secrets.SKILLS_NETWORK_BOT_APP_ID }}
+        run: |
+          set -euo pipefail
+          if [ -z "$APP_ID" ]; then
+            echo "go=false" >> "$GITHUB_OUTPUT"
+            echo "No release: the bot credentials are not visible here, so a tag would build nothing." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          echo "go=true" >> "$GITHUB_OUTPUT"
+
+      - id: token
+        if: steps.gate.outputs.go == 'true'
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.SKILLS_NETWORK_BOT_APP_ID }}
+          private-key: ${{ secrets.SKILLS_NETWORK_BOT_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+
+      - uses: actions/checkout@v4
+        if: steps.gate.outputs.go == 'true'
+        with:
+          # Checking out with the app token is what makes the tag push below start a build. A
+          # push made with the default token starts nothing at all.
+          token: ${{ steps.token.outputs.token }}
+
+      - id: release
+        if: steps.gate.outputs.go == 'true'
+        env:
+          # Reads go through the default token. The app token only pushes the tag and makes
+          # the release.
+          GH_TOKEN: ${{ github.token }}
+          BOT_TOKEN: ${{ steps.token.outputs.token }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          set -euo pipefail
+          # Without this, a failed gh inside $(...) hands back an empty string and the script
+          # carries on as if the answer were "nothing".
+          shopt -s inherit_errexit
+
+          say() { echo "$1" | tee -a "$GITHUB_STEP_SUMMARY"; }
+          stop() { say "No release: $1."; exit 0; }
+
+          # A newest release older than this is stale, and only the merging pull request is
+          # counted. See the tag loop.
+          stale_days=90
+
+          # The pull request a commit came from, or nothing for a commit pushed straight at the
+          # branch. Squash and rebase merges both leave commits the API ties back to their pull
+          # request.
+          #
+          # GitHub links a commit to its pull request a few seconds after the push, so an empty
+          # answer straight after a merge proves nothing. The merged commit asks a few times.
+          # Older commits in the range ask once: their links settled long ago, and a range can
+          # hold dozens of commits with no pull request at all, each of which would otherwise
+          # pay the full wait. After that, try the "(#123)" a squash merge leaves at the end of
+          # its subject, and only believe it if that pull request really merged as this commit.
+          #
+          # A commit can belong to two pull requests: one into a feature branch, then the one
+          # that took that branch into the default branch. The merged one into the default
+          # branch is the vote. Anything else is a fallback.
+          pr_of() {
+            local sha=$1 subject=$2 attempts=$3 pr="" attempt guess merged_as
+            for (( attempt = 1; attempt <= attempts; attempt++ )); do
+              pr=$(gh api "repos/$GITHUB_REPOSITORY/commits/$sha/pulls" \
+                | jq -r --arg base "$DEFAULT_BRANCH" \
+                    '(map(select(.base.ref == $base and .merged_at != null)) | .[0].number) // .[0].number // empty')
+              [ -n "$pr" ] && break
+              [ "$attempt" = "$attempts" ] || sleep 5
+            done
+            if [ -z "$pr" ]; then
+              guess=$(sed -nE 's/.*\(#([0-9]+)\)[[:space:]]*$/\1/p' <<<"$subject")
+              if [ -n "$guess" ]; then
+                merged_as=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$guess" --jq '.merge_commit_sha' 2>/dev/null || true)
+                [ "$merged_as" = "$sha" ] && pr=$guess
+              fi
+            fi
+            echo "$pr"
+          }
+
+          # A box counts only when it is ticked and carries its marker on the same line. The
+          # labels can then be reworded freely, and prose that happens to mention a word is
+          # not a vote.
+          #
+          # The body reaches grep as a here-string. Through a pipe, grep -q quits on its first
+          # match, the printf feeding it dies of SIGPIPE on a long body, and pipefail then
+          # reports a ticked box as unticked.
+          ticked() {
+            grep -qiE "^[[:space:]]*-[[:space:]]*\[x\].*<!--[[:space:]]*bump:$1[[:space:]]*-->" <<<"$body"
+          }
+          has_boxes() {
+            grep -qiE "<!--[[:space:]]*bump:(major|minor|patch|none)[[:space:]]*-->" <<<"$body"
+          }
+
+          # How big a release one pull request asks for, printed as "<bump> <why>", where bump
+          # is major, minor, patch or none. Biggest wins, so two ticks is not ambiguous.
+          #
+          # The two unticked cases are deliberately opposite. Boxes present with none ticked
+          # means somebody took the tick out and chose nothing, so assume the change can break
+          # something. No boxes at all means this repository's template has not been updated,
+          # which is nobody's decision, so nothing is released. Releasing anything there would
+          # tag, build and ship a deploy bump for every merge, including doc and CI changes,
+          # in every repository that has not adopted the template yet.
+          #
+          # The body comes from the API. A merge that released nothing can still be released by
+          # editing the description and re-running this job. Once a tag covers the tip the
+          # re-run stops there, so a wrong bump cannot be resized this way. GitHub stores bodies
+          # with CRLF, which the line anchors in ticked() do not match.
+          bump_of() {
+            local pr=$1 pull author
+            pull=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$pr")
+            author=$(jq -r '.user.login' <<<"$pull")
+            case "$author" in
+              'dependabot[bot]'|'ibm-mend-app[bot]'|'skills-network-bot[bot]')
+                echo "none #$pr was raised by $author"; return ;;
+            esac
+            body=$(jq -r '.body // ""' <<<"$pull" | tr -d '\r')
+            if   ticked major; then echo "major #$pr is ticked major"
+            elif ticked minor; then echo "minor #$pr is ticked minor"
+            elif ticked patch; then echo "patch #$pr is ticked patch"
+            elif ticked none;  then echo "none #$pr is ticked no release"
+            elif has_boxes;    then echo "major #$pr has the boxes with none ticked, so it counts as breaking"
+            else echo "none #$pr carries no release impact section, so this repository's template needs updating"
+            fi
+          }
+
+          rank() { case $1 in major) echo 3 ;; minor) echo 2 ;; patch) echo 1 ;; *) echo 0 ;; esac; }
+
+          # Every tag on the remote as "<commit> <name>", with no history fetched. An annotated
+          # tag is listed twice: once as the tag object, then peeled to its commit as
+          # "<name>^{}". The peeled line comes second and wins.
+          #
+          # finals holds release tags only. A release candidate is a plan, not a release, and
+          # these repositories carry hand made tags like james-test-3 and newltiparam.1.
+          read_tags() {
+            tags=$(git ls-remote --tags origin | awk '{
+              name = $2; sub("^refs/tags/", "", name)
+              if (sub(/\^\{\}$/, "", name) || !(name in commit)) commit[name] = $1
+            } END { for (name in commit) print commit[name], name }')
+            names=$(awk '{ print $2 }' <<<"$tags")
+            finals=$(awk '$2 ~ /^v?[0-9]+\.[0-9]+\.[0-9]+$/' <<<"$tags")
+          }
+
+          # Makes sure a tag this bot pushed has its GitHub release. A run that died between
+          # pushing the tag and making the release gets finished here by the next run. Tags
+          # somebody pushed by hand are left alone.
+          #
+          # publish() calls this in an || list, and bash switches errexit off inside a function
+          # called that way. So every gh failure is returned by hand. Left to errexit, a lookup
+          # that got no answer reads as "not a bot tag" and the warning never fires.
+          make_release() {
+            local tag=$1 obj tagger=""
+            obj=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$tag" --jq 'select(.object.type == "tag") | .object.sha') || return 1
+            if [ -n "$obj" ]; then
+              tagger=$(gh api "repos/$GITHUB_REPOSITORY/git/tags/$obj" --jq '.tagger.name') || return 1
+            fi
+            [ "$tagger" = "skills-network-bot[bot]" ] || return 0
+            if GH_TOKEN=$BOT_TOKEN gh release view "$tag" >/dev/null 2>&1; then
+              echo "Release $tag already exists."
+            else
+              GH_TOKEN=$BOT_TOKEN gh release create "$tag" --title "$tag" --generate-notes --verify-tag || return 1
+            fi
+          }
+
+          # The tag is what deploys. The release page is nice to have, so a failure making it
+          # is a warning on the run, and the next run tries again. This runs for an older tag
+          # before the new one is pushed, and a hard failure there would block every release
+          # in the repository until somebody made that old release by hand.
+          publish() {
+            make_release "$1" || echo "::warning::Could not make sure $1 has a GitHub release. The next run tries again."
+          }
+
+          pr=$(pr_of "$GITHUB_SHA" "$(head -n1 <<<"$COMMIT_MESSAGE")" 4)
+          if [ -n "$pr" ]; then
+            verdict=$(bump_of "$pr")
+            read -r own why <<<"$verdict"
+            declare -A bumps=(["$pr"]="$own")
+          else
+            own=none why="this commit belongs to no pull request, so it asks for nothing"
+            declare -A bumps=()
+          fi
+          say "$why."
+
+          git config user.name  "skills-network-bot[bot]"
+          git config user.email "skills-network-bot[bot]@users.noreply.github.com"
+
+          # No lock and no queue. Each attempt reads the tags and the tip of the branch, then
+          # tries to push the next version onto the tip. Git refuses to push a tag name that
+          # already exists, so two runs racing cannot both get one version. The loser reads
+          # again and goes round.
+          #
+          # Releasing the tip, not this commit, is what makes that safe. Whichever run wins
+          # covers every merge up to the tip, sized by the biggest bump among them. A slow run
+          # then loses nothing, and versions only ever go up. It also means a re-run, or a
+          # caller that uses this workflow twice (one image each), finds the tip tagged and
+          # creates nothing more.
+          #
+          # The merging pull request is one vote among those, not a gate. A dependabot merge,
+          # or a commit pushed straight at the branch, asks for nothing itself, but still has
+          # to release whatever an earlier run left untagged, or a feature could sit unreleased
+          # behind a week of dependency bumps. The one exception is a repository whose newest
+          # release is stale, below.
+          for attempt in 1 2 3 4 5; do
+            read_tags
+            tip=$(gh api "repos/$GITHUB_REPOSITORY/commits/$DEFAULT_BRANCH" --jq '.sha')
+
+            at_tip=$(awk -v sha="$tip" '$1 == sha { print $2; exit }' <<<"$finals")
+            if [ -n "$at_tip" ]; then
+              say "$at_tip already covers the tip of $DEFAULT_BRANCH."
+              echo "tagged=true" >> "$GITHUB_OUTPUT"
+              publish "$at_tip"
+              exit 0
+            fi
+
+            core=$(awk '{ sub(/^v/, "", $2); print $2 }' <<<"$finals" \
+              | sort -t. -k1,1n -k2,2n -k3,3n | tail -n1)
+
+            if [ -z "$core" ]; then
+              # No base means no range to scan, so this merge is the only vote.
+              bump=$own
+              [ "$bump" != none ] || stop "$why, and there are no release tags here yet"
+              tag="0.1.0"
+              say "No release tags here yet, so this starts at $tag."
+            else
+              # Repositories disagree about the v, and whichever one is already in use is the
+              # right one. The deploy repositories pin the image tag, which never carries it,
+              # and resolve the git ref separately.
+              prefix=""
+              grep -qxF "v$core" <<<"$names" && prefix="v"
+              base="$prefix$core"
+              publish "$base"
+
+              # A stale newest release means nothing merged since it has asked for a release:
+              # this repository is not on the template yet, or it went quiet. Either way the range
+              # back to it can be hundreds of commits, and every merge would pay an API call
+              # per commit and hold the build up while it did. So only this merge is counted.
+              # A repository that never asks for a release costs a handful of calls per merge,
+              # and one that does gets a fresh tag, after which the full scan is cheap.
+              base_sha=$(awk -v name="$base" '$2 == name { print $1; exit }' <<<"$finals")
+              base_date=$(gh api "repos/$GITHUB_REPOSITORY/commits/$base_sha" --jq '.commit.committer.date')
+              base_age=$(( ( $(date +%s) - $(date -d "$base_date" +%s) ) / 86400 ))
+              if [ "$base_age" -gt "$stale_days" ]; then
+                bump=$own
+                [ "$bump" != none ] || stop "$why, and $base is $base_age days old, so nothing merged before this is counted"
+                counted="$base is $base_age days old, so only this merge ($bump) is counted"
+              else
+                # Rebase and merge commits put several commits in the range for one pull
+                # request, so each pull request is read once. bumps caches the verdicts, and
+                # already holds this merge's own.
+                commits=$(gh api --paginate "repos/$GITHUB_REPOSITORY/compare/$base...$tip" \
+                  --jq '.commits[] | [.sha, (.commit.message | split("\n")[0])] | @tsv')
+                bump=none
+                while IFS=$'\t' read -r sha subject; do
+                  [ -n "$sha" ] || continue
+                  if [ "$sha" = "$GITHUB_SHA" ]; then p=$pr; else p=$(pr_of "$sha" "$subject" 1); fi
+                  [ -n "$p" ] || continue
+                  if [ -z "${bumps[$p]+set}" ]; then
+                    verdict=$(bump_of "$p")
+                    read -r b _ <<<"$verdict"
+                    bumps[$p]=$b
+                  fi
+                  if [ "$(rank "${bumps[$p]}")" -gt "$(rank "$bump")" ]; then bump=${bumps[$p]}; fi
+                done <<<"$commits"
+
+                # Nothing in the range asks for a release. That covers a merge that asked for
+                # none, and a merge that asked for one but is not in the range because $base
+                # already has it. Nothing is lost by letting the ordinary build run.
+                [ "$bump" != none ] || stop "nothing merged since $base asks for a release"
+                counted="the biggest bump merged since is $bump"
+              fi
+
+              IFS=. read -r MA MI PA <<<"$core"
+              case "$bump" in
+                major) MA=$((MA + 1)); MI=0; PA=0 ;;
+                minor) MI=$((MI + 1)); PA=0 ;;
+                patch) PA=$((PA + 1)) ;;
+              esac
+              tag="${prefix}${MA}.${MI}.${PA}"
+              say "Newest release is $base, and $counted, so this is $tag."
+            fi
+
+            # Annotated, so the tagger is recorded and anybody looking can tell automation
+            # from somebody's laptop. make_release() relies on that tagger too.
+            git fetch -q --depth=1 origin "$tip"
+            git tag -a "$tag" "$tip" -m "Release $tag ($bump)"
+            if git push origin "refs/tags/$tag" 2>"$RUNNER_TEMP/push.err"; then
+              echo "tagged=true" >> "$GITHUB_OUTPUT"
+              publish "$tag"
+              say "Release [$tag](https://github.com/$GITHUB_REPOSITORY/releases/tag/$tag) at $tip."
+              exit 0
+            fi
+
+            cat "$RUNNER_TEMP/push.err" >&2
+            grep -q "already exists" "$RUNNER_TEMP/push.err" || exit 1
+            git tag -d "$tag" >/dev/null
+            echo "Another run pushed $tag first. Reading the tags again."
+            sleep $((attempt * 3))
+          done
+
+          echo "::error::Another run pushed the same version first, five times in a row."
+          exit 1
+
   needs-scan-for-vulnerabilities:
     runs-on: ubuntu-latest
     outputs:
@@ -105,7 +444,12 @@ jobs:
           fi
 
   build:
-    needs: needs-scan-for-vulnerabilities
+    needs: [needs-scan-for-vulnerabilities, release]
+    # A merge that creates a tag builds nothing here. The tag push starts a run of its own, and
+    # that run builds, pushes, signs and announces. Building in both would make the same image
+    # twice. A failed release job still lets this run, so a GitHub hiccup costs a release,
+    # not the build.
+    if: ${{ !cancelled() && needs.needs-scan-for-vulnerabilities.result == 'success' && needs.release.outputs.tagged != 'true' }}
     name: docker image
     runs-on: ubuntu-latest
     outputs:
