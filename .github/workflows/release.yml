@@ -710,7 +710,13 @@ jobs:
     # Release candidates are not announced, e.g. 14.42.2-rc.0 is skipped and 14.42.2 is announced.
     # Which services actually get bumped is decided by the deploy repos, each of which
     # annotates the image tags it wants tracked.
-    if: ${{ inputs.push && startsWith(github.ref, 'refs/tags/')
+    #
+    # !cancelled() with an explicit result check, because a job-level if with no status function
+    # gets an implicit success(), and success() looks at every job upstream, not just the direct
+    # needs. The release job is skipped on every tag run, which would make success() false here
+    # and skip the announcement for every release.
+    if: ${{ !cancelled() && needs.build.result == 'success'
+            && inputs.push && startsWith(github.ref, 'refs/tags/')
             && needs.build.outputs.version != ''
             && !contains(needs.build.outputs.version, '-') }}
     runs-on: ubuntu-latest
