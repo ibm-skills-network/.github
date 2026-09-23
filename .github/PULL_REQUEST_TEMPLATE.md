@@ -22,10 +22,10 @@ Tick one. Major is ticked for you, so move the tick if this change is smaller th
 The marker comments are what the automation reads, so leave them alone.
 -->
 
-- [ ] Patch <!-- bump:patch --> a backwards-compatible bug fix
-- [ ] Minor <!-- bump:minor --> new functionality, added backwards compatibly
-- [x] Major <!-- bump:major --> an incompatible change, see below
-- [ ] No release <!-- bump:none --> docs, CI or tests only. A release will not be created.
+- [ ] Patch <!-- bump:patch --> -- a backwards-compatible bug fix
+- [ ] Minor <!-- bump:minor --> -- new functionality, added backwards compatibly
+- [x] Major <!-- bump:major --> -- an incompatible change, see below
+- [ ] No release <!-- bump:none --> -- docs, CI or tests only. A release will not be created.
 
 <!--
 ### What counts as incompatible / a major change
