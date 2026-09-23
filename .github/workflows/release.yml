@@ -65,9 +65,6 @@ on:
         type: boolean
         default: false
       autorelease:
-        # Off by default while the repositories that must never cut a release are given an
-        # explicit false of their own. Turning this default on then enables every other
-        # caller at once, and those explicit falses are what keeps them out.
         description: "Set to false to stop a merge to the default branch from creating a release"
         required: false
         type: boolean
@@ -176,16 +173,15 @@ jobs:
           # counted. See the tag loop.
           stale_days=90
 
-          # The pull request a commit came from, or nothing for a commit pushed straight at the
-          # branch. Squash and rebase merges both leave commits the API ties back to their pull
-          # request.
+          # The pull request a commit came from, or nothing for a commit pushed straight to the
+          # branch. 
           #
           # GitHub links a commit to its pull request a few seconds after the push, so an empty
-          # answer straight after a merge proves nothing. The merged commit asks a few times.
+          # answer straight after a merge is not definitive so we check a few times. 
           # Older commits in the range ask once: their links settled long ago, and a range can
           # hold dozens of commits with no pull request at all, each of which would otherwise
-          # pay the full wait. After that, try the "(#123)" a squash merge leaves at the end of
-          # its subject, and only believe it if that pull request really merged as this commit.
+          # wait the full time. After that, try the "(#123)" a squash merge leaves at the end of
+          # its subject, and only trust it if that pull request really merged as this commit.
           #
           # A commit can belong to two pull requests: one into a feature branch, then the one
           # that took that branch into the default branch. The merged one into the default
@@ -210,12 +206,7 @@ jobs:
           }
 
           # A box counts only when it is ticked and carries its marker on the same line. The
-          # labels can then be reworded freely, and prose that happens to mention a word is
-          # not a vote.
-          #
-          # The body reaches grep as a here-string. Through a pipe, grep -q quits on its first
-          # match, the printf feeding it dies of SIGPIPE on a long body, and pipefail then
-          # reports a ticked box as unticked.
+          # labels can then be reworded freely.          #
           ticked() {
             grep -qiE "^[[:space:]]*-[[:space:]]*\[x\].*<!--[[:space:]]*bump:$1[[:space:]]*-->" <<<"$body"
           }
@@ -229,14 +220,9 @@ jobs:
           # The two unticked cases are deliberately opposite. Boxes present with none ticked
           # means somebody took the tick out and chose nothing, so assume the change can break
           # something. No boxes at all means this repository's template has not been updated,
-          # which is nobody's decision, so nothing is released. Releasing anything there would
+          # so nothing is released. Releasing anything there would
           # tag, build and ship a deploy bump for every merge, including doc and CI changes,
           # in every repository that has not adopted the template yet.
-          #
-          # The body comes from the API. A merge that released nothing can still be released by
-          # editing the description and re-running this job. Once a tag covers the tip the
-          # re-run stops there, so a wrong bump cannot be resized this way. GitHub stores bodies
-          # with CRLF, which the line anchors in ticked() do not match.
           bump_of() {
             local pr=$1 pull author
             pull=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$pr")
@@ -260,25 +246,17 @@ jobs:
           # Every tag on the remote as "<commit> <name>", with no history fetched. An annotated
           # tag is listed twice: once as the tag object, then peeled to its commit as
           # "<name>^{}". The peeled line comes second and wins.
-          #
-          # finals holds release tags only. A release candidate is a plan, not a release, and
-          # these repositories carry hand made tags like james-test-3 and newltiparam.1.
           read_tags() {
             tags=$(git ls-remote --tags origin | awk '{
               name = $2; sub("^refs/tags/", "", name)
               if (sub(/\^\{\}$/, "", name) || !(name in commit)) commit[name] = $1
             } END { for (name in commit) print commit[name], name }')
-            names=$(awk '{ print $2 }' <<<"$tags")
             finals=$(awk '$2 ~ /^v?[0-9]+\.[0-9]+\.[0-9]+$/' <<<"$tags")
           }
 
           # Makes sure a tag this bot pushed has its GitHub release. A run that died between
           # pushing the tag and making the release gets finished here by the next run. Tags
           # somebody pushed by hand are left alone.
-          #
-          # publish() calls this in an || list, and bash switches errexit off inside a function
-          # called that way. So every gh failure is returned by hand. Left to errexit, a lookup
-          # that got no answer reads as "not a bot tag" and the warning never fires.
           make_release() {
             local tag=$1 obj tagger=""
             obj=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$tag" --jq 'select(.object.type == "tag") | .object.sha') || return 1
@@ -293,10 +271,6 @@ jobs:
             fi
           }
 
-          # The tag is what deploys. The release page is nice to have, so a failure making it
-          # is a warning on the run, and the next run tries again. This runs for an older tag
-          # before the new one is pushed, and a hard failure there would block every release
-          # in the repository until somebody made that old release by hand.
           publish() {
             make_release "$1" || echo "::warning::Could not make sure $1 has a GitHub release. The next run tries again."
           }
@@ -315,22 +289,26 @@ jobs:
           git config user.name  "skills-network-bot[bot]"
           git config user.email "skills-network-bot[bot]@users.noreply.github.com"
 
-          # No lock and no queue. Each attempt reads the tags and the tip of the branch, then
-          # tries to push the next version onto the tip. Git refuses to push a tag name that
-          # already exists, so two runs racing cannot both get one version. The loser reads
-          # again and goes round.
+          # Each attempt reads the tags and the head of the branch, then
+          # tries to push the next version. Git refuses to push a tag name that
+          # already exists, so two runs racing cannot both get one version. The loser tries again.
           #
-          # Releasing the tip, not this commit, is what makes that safe. Whichever run wins
-          # covers every merge up to the tip, sized by the biggest bump among them. A slow run
+          # Releasing the head, not this commit, is what makes that safe. Whichever run wins
+          # covers every merge up to the head, sized by the biggest bump among them. A slow run
           # then loses nothing, and versions only ever go up. It also means a re-run, or a
-          # caller that uses this workflow twice (one image each), finds the tip tagged and
-          # creates nothing more.
+          # caller that uses this workflow twice (one image each), finds the head tagged and
+          # doesn't try to create a tag.
           #
-          # The merging pull request is one vote among those, not a gate. A dependabot merge,
-          # or a commit pushed straight at the branch, asks for nothing itself, but still has
-          # to release whatever an earlier run left untagged, or a feature could sit unreleased
-          # behind a week of dependency bumps. The one exception is a repository whose newest
-          # release is stale, below.
+          # The size is the biggest tick across every pull request merged since that tag, not
+          # just the one that set this run off.
+          #
+          # So any merge sweeps up whatever is sitting untagged behind it. A dependabot merge
+          # asks for nothing on its own, but it still releases a feature that merged days ago
+          # and never got a tag. Count only the triggering pull request and that feature waits
+          # for the next human merge, which on a quiet repository is a week of dependency
+          # bumps away.
+          #
+          # A repository whose newest release is stale is the exception. See below.
           for attempt in 1 2 3 4 5; do
             read_tags
             tip=$(gh api "repos/$GITHUB_REPOSITORY/commits/$DEFAULT_BRANCH" --jq '.sha')
@@ -353,12 +331,10 @@ jobs:
               tag="0.1.0"
               say "No release tags here yet, so this starts at $tag."
             else
-              # Repositories disagree about the v, and whichever one is already in use is the
-              # right one. The deploy repositories pin the image tag, which never carries it,
-              # and resolve the git ref separately.
-              prefix=""
-              grep -qxF "v$core" <<<"$names" && prefix="v"
-              base="$prefix$core"
+              # Release tags here are bare numbers, so the core is already the tag name.
+              # base is handed to the compare range and the commit lookup below, so it has to
+              # name a tag that really exists. A repository tagging vX.Y.Z would 404 there.
+              base="$core"
               publish "$base"
 
               # A stale newest release means nothing merged since it has asked for a release:
@@ -406,7 +382,7 @@ jobs:
                 minor) MI=$((MI + 1)); PA=0 ;;
                 patch) PA=$((PA + 1)) ;;
               esac
-              tag="${prefix}${MA}.${MI}.${PA}"
+              tag="${MA}.${MI}.${PA}"
               say "Newest release is $base, and $counted, so this is $tag."
             fi
 
