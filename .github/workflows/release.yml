@@ -65,10 +65,13 @@ on:
         type: boolean
         default: false
       autorelease:
+        # Off by default while the repositories that must never cut a release are given an
+        # explicit false of their own. Turning this default on then enables every other
+        # caller at once, and those explicit falses are what keeps them out.
         description: "Set to false to stop a merge to the default branch from creating a release"
         required: false
         type: boolean
-        default: true
+        default: false
     secrets:
       GH_TOKEN:
         required: false
