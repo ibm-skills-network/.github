@@ -68,7 +68,7 @@ on:
         description: "Set to false to stop a merge to the default branch from creating a release"
         required: false
         type: boolean
-        default: false
+        default: true
     secrets:
       GH_TOKEN:
         required: false
