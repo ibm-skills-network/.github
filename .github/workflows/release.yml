@@ -206,9 +206,11 @@ jobs:
           }
 
           # A box counts only when it is ticked and carries its marker on the same line. The
-          # labels can then be reworded freely.          #
+          # labels can then be reworded freely. Whitespace inside the brackets is ignored, so
+          # "[x ]" and "[ x]" count. GitHub renders those as plain text, not as a checkbox, but
+          # the author meant to tick it
           ticked() {
-            grep -qiE "^[[:space:]]*-[[:space:]]*\[x\].*<!--[[:space:]]*bump:$1[[:space:]]*-->" <<<"$body"
+            grep -qiE "^[[:space:]]*-[[:space:]]*\[[[:space:]]*x[[:space:]]*\].*<!--[[:space:]]*bump:$1[[:space:]]*-->" <<<"$body"
           }
           has_boxes() {
             grep -qiE "<!--[[:space:]]*bump:(major|minor|patch|none)[[:space:]]*-->" <<<"$body"
