@@ -1,0 +1,56 @@
+name: Auto-merge policy
+description: >-
+  Whether this repository lets the named source auto-merge, read from the repository
+  itself rather than from a list held centrally.
+
+inputs:
+  source:
+    description: dependabot, renovate, or mend-remediation
+    required: true
+  token:
+    description: Token used to read the opt-out file
+    required: true
+
+outputs:
+  enabled:
+    description: "'true' when this source may auto-merge here"
+    value: ${{ steps.read.outputs.enabled }}
+
+runs:
+  using: composite
+  steps:
+    - id: read
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        REPO: ${{ github.repository }}
+        SOURCE: ${{ inputs.source }}
+      run: |
+        set -uo pipefail
+
+        # Deliberately read from the repository's default branch, not from the pull
+        # request's head. Reading the head would let a pull request grant itself
+        # auto-merge by adding a line to this file in the same change.
+        #
+        # A repository with no file is opted in, because auto-merge is already on
+        # org-wide and this must not turn it off for ~90 repositories at once.
+        path=".github/dependency-auto-merge-opt-out"
+        if ! encoded=$(gh api "repos/$REPO/contents/$path" --jq .content 2>/dev/null); then
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        # Strip comments and whitespace, then look for the source or the word "all".
+        if printf '%s' "$encoded" | base64 -d \
+             | sed 's/#.*//' | tr -d '[:blank:]' \
+             | grep -qxiE "all|$SOURCE"; then
+          echo "enabled=false" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Auto-merge is off for \`$SOURCE\` in this repository"
+            echo ""
+            echo "\`$path\` on the default branch opts out. Remove the line to turn it back on."
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+        fi
+
+        echo "enabled=true" >> "$GITHUB_OUTPUT"
