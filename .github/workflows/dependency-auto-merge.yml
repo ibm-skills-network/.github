@@ -21,15 +21,27 @@ jobs:
         uses: dependabot/fetch-metadata@v2
         with:
           github-token: "${{ secrets.GITHUB_TOKEN }}"
+      - name: Read this repository's auto-merge policy
+        id: policy
+        uses: ibm-skills-network/.github/.github/actions/auto-merge-policy@main
+        with:
+          source: dependabot
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Enable auto-merge
-        # Only enable auto-merge if the PR is not a major version update
-        # if: steps.metadata.outputs.update-type != 'version-update:semver-major'
+        # A major upgrade is the one class of change a passing test suite is least likely
+        # to catch, so it goes to a person. This guard was present but commented out.
         # Requires that auto-merge is enabled for the repository
+        if: >-
+          ${{ steps.policy.outputs.enabled == 'true'
+              && steps.metadata.outputs.update-type != 'version-update:semver-major' }}
         run: gh pr merge --auto --squash "$PR_URL"
         env:
           PR_URL: ${{github.event.pull_request.html_url}}
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
       - name: Approve PR
+        if: >-
+          ${{ steps.policy.outputs.enabled == 'true'
+              && steps.metadata.outputs.update-type != 'version-update:semver-major' }}
         run: gh pr review --approve "$PR_URL"
         env:
           PR_URL: ${{github.event.pull_request.html_url}}
@@ -40,13 +52,27 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event.pull_request.user.login == 'ibm-mend-app[bot]' }}
     steps:
+      # No major version gate here, deliberately. Mend Renovate never opens a major
+      # upgrade in this organisation: repo-config.json in ibm-skills-network/mend-config
+      # extends ":disableMajorUpdates", so majors are suppressed at the source rather
+      # than filtered here. There is no equivalent of dependabot/fetch-metadata for
+      # Renovate, and a gate inferred from the pull request title would be guesswork.
+      # If that config line is ever removed, this job needs a real gate before it.
+      - name: Read this repository's auto-merge policy
+        id: policy
+        uses: ibm-skills-network/.github/.github/actions/auto-merge-policy@main
+        with:
+          source: renovate
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Enable auto-merge
         # Requires that auto-merge is enabled for the repository
+        if: ${{ steps.policy.outputs.enabled == 'true' }}
         run: gh pr merge --auto --squash "$PR_URL"
         env:
           PR_URL: ${{github.event.pull_request.html_url}}
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
       - name: Approve PR
+        if: ${{ steps.policy.outputs.enabled == 'true' }}
         run: gh pr review --approve "$PR_URL"
         env:
           PR_URL: ${{github.event.pull_request.html_url}}
@@ -65,13 +91,21 @@ jobs:
       ${{ startsWith(github.event.pull_request.head.ref, 'mend-remediate/')
           && github.event.pull_request.user.login == vars.MEND_REMEDIATION_ACTOR }}
     steps:
+      - name: Read this repository's auto-merge policy
+        id: policy
+        uses: ibm-skills-network/.github/.github/actions/auto-merge-policy@main
+        with:
+          source: mend-remediation
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Enable auto-merge
         # Requires that auto-merge is enabled for the repository
+        if: ${{ steps.policy.outputs.enabled == 'true' }}
         run: gh pr merge --auto --squash "$PR_URL"
         env:
           PR_URL: ${{github.event.pull_request.html_url}}
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
       - name: Approve PR
+        if: ${{ steps.policy.outputs.enabled == 'true' }}
         run: gh pr review --approve "$PR_URL"
         env:
           PR_URL: ${{github.event.pull_request.html_url}}
