@@ -35,9 +35,15 @@ runs:
         # A repository with no file is opted in, because auto-merge is already on
         # org-wide and this must not turn it off for ~90 repositories at once.
         path=".github/dependency-auto-merge-opt-out"
-        if ! encoded=$(gh api "repos/$REPO/contents/$path" --jq .content 2>/dev/null); then
-          echo "enabled=true" >> "$GITHUB_OUTPUT"
-          exit 0
+        if ! encoded=$(gh api "repos/$REPO/contents/$path" --jq .content 2>"$RUNNER_TEMP/opt-out-error"); then
+          # Only a missing file means opted in; any other error must not enable auto-merge.
+          if grep -q "HTTP 404" "$RUNNER_TEMP/opt-out-error"; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "enabled=false" >> "$GITHUB_OUTPUT"
+          echo "::error::Could not read $path: $(cat "$RUNNER_TEMP/opt-out-error")"
+          exit 1
         fi
 
         # Strip comments and whitespace, then look for the source or the word "all".
