@@ -493,23 +493,12 @@ jobs:
           echo "${{ steps.base-release.outputs.base-release }}"
         if: ${{ github.event_name == 'schedule' }}
 
-      # Check out with a bot app token when one is available. A personal GH_TOKEN stops working
-      # when its owner leaves the org, and every build of that repo then fails at checkout. The
-      # app is installed on every repo in the org, so its token also reaches private submodules.
-      - id: checkout-creds
-        env:
-          APP_ID: ${{ secrets.SKILLS_NETWORK_BOT_APP_ID }}
-        run: |
-          # The bot credentials are org secrets scoped to private repositories, so a public
-          # repo reads them as empty and falls back to GH_TOKEN or the default token.
-          if [ -n "$APP_ID" ]; then
-            echo "have=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "have=false" >> "$GITHUB_OUTPUT"
-          fi
-
+      # Check out with the bot app token. A personal GH_TOKEN stops working when its owner leaves
+      # the org. The app is installed on every repo in the org, so its token also reaches private
+      # submodules. Public repos cannot see the bot secrets, so this step fails there and checkout
+      # falls back to GH_TOKEN or the default token.
       - id: checkout-token
-        if: steps.checkout-creds.outputs.have == 'true'
+        continue-on-error: true
         uses: actions/create-github-app-token@v1
         with:
           app-id: ${{ secrets.SKILLS_NETWORK_BOT_APP_ID }}
