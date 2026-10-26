@@ -495,10 +495,8 @@ jobs:
 
       # Check out with the bot app token. A personal GH_TOKEN stops working when its owner leaves
       # the org. The app is installed on every repo in the org, so its token also reaches private
-      # submodules. Public repos cannot see the bot secrets, so this step fails there and checkout
-      # falls back to GH_TOKEN or the default token.
+      # submodules.
       - id: checkout-token
-        continue-on-error: true
         uses: actions/create-github-app-token@v1
         with:
           app-id: ${{ secrets.SKILLS_NETWORK_BOT_APP_ID }}
@@ -509,13 +507,13 @@ jobs:
       # Otherwise use referenced/default branch/tag
       - uses: actions/checkout@v4
         with:
-          token: ${{ steps.checkout-token.outputs.token || secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          token: ${{ steps.checkout-token.outputs.token }}
           submodules: ${{ inputs.submodules }}
           ref: ${{ steps.latest-release.outputs.tag_name }}
         if: ${{ github.event_name == 'schedule' }}
       - uses: actions/checkout@v4
         with:
-          token: ${{ steps.checkout-token.outputs.token || secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          token: ${{ steps.checkout-token.outputs.token }}
           submodules: ${{ inputs.submodules }}
         if: ${{ github.event_name != 'schedule' }}
 
