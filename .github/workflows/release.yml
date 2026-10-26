@@ -493,17 +493,24 @@ jobs:
           echo "${{ steps.base-release.outputs.base-release }}"
         if: ${{ github.event_name == 'schedule' }}
 
+      - id: skills-network-bot-app
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.SKILLS_NETWORK_BOT_APP_ID }}
+          private-key: ${{ secrets.SKILLS_NETWORK_BOT_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
       # If this is a scheduled (nightly) build use latest release tag
       # Otherwise use referenced/default branch/tag
       - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          token: ${{ steps.skills-network-bot-app.outputs.token }}
           submodules: ${{ inputs.submodules }}
           ref: ${{ steps.latest-release.outputs.tag_name }}
         if: ${{ github.event_name == 'schedule' }}
       - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          token: ${{ steps.skills-network-bot-app.outputs.token }}
           submodules: ${{ inputs.submodules }}
         if: ${{ github.event_name != 'schedule' }}
 
