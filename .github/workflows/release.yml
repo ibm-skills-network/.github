@@ -493,17 +493,40 @@ jobs:
           echo "${{ steps.base-release.outputs.base-release }}"
         if: ${{ github.event_name == 'schedule' }}
 
+      # Check out with a bot app token when one is available. A personal GH_TOKEN stops working
+      # when its owner leaves the org, and every build of that repo then fails at checkout. The
+      # app is installed on every repo in the org, so its token also reaches private submodules.
+      - id: checkout-creds
+        env:
+          APP_ID: ${{ secrets.SKILLS_NETWORK_BOT_APP_ID }}
+        run: |
+          # The bot credentials are org secrets scoped to private repositories, so a public
+          # repo reads them as empty and falls back to GH_TOKEN or the default token.
+          if [ -n "$APP_ID" ]; then
+            echo "have=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "have=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - id: checkout-token
+        if: steps.checkout-creds.outputs.have == 'true'
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.SKILLS_NETWORK_BOT_APP_ID }}
+          private-key: ${{ secrets.SKILLS_NETWORK_BOT_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+
       # If this is a scheduled (nightly) build use latest release tag
       # Otherwise use referenced/default branch/tag
       - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          token: ${{ steps.checkout-token.outputs.token || secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
           submodules: ${{ inputs.submodules }}
           ref: ${{ steps.latest-release.outputs.tag_name }}
         if: ${{ github.event_name == 'schedule' }}
       - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
+          token: ${{ steps.checkout-token.outputs.token || secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
           submodules: ${{ inputs.submodules }}
         if: ${{ github.event_name != 'schedule' }}
 
