@@ -493,9 +493,6 @@ jobs:
           echo "${{ steps.base-release.outputs.base-release }}"
         if: ${{ github.event_name == 'schedule' }}
 
-      # Check out with the bot app token. A personal GH_TOKEN stops working when its owner leaves
-      # the org. The app is installed on every repo in the org, so its token also reaches private
-      # submodules.
       - id: skills-network-bot-app
         uses: actions/create-github-app-token@v1
         with:
