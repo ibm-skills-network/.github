@@ -552,12 +552,8 @@ jobs:
             echo "cache-from=" >> $GITHUB_OUTPUT
             echo "cache-to=" >> $GITHUB_OUTPUT
           else
-            # disable caching on all days until we confirm our "Requires Manual Intervention"
-            # issues aren't due to caching issues
-            echo "cache-from=" >> $GITHUB_OUTPUT
-            echo "cache-to=" >> $GITHUB_OUTPUT
-            # echo "cache-to=type=gha" >> $GITHUB_OUTPUT
-            # echo "cache-to=type=gha,mode=max" >> $GITHUB_OUTPUT
+            echo "cache-from=type=gha" >> $GITHUB_OUTPUT
+            echo "cache-to=type=gha,mode=max" >> $GITHUB_OUTPUT
           fi
 
       - name: Fetch Skills Network Certificate Authority Public Certificate
