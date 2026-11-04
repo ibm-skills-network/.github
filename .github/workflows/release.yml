@@ -449,7 +449,7 @@ jobs:
           fi
 
       - name: Maximize free space on runner
-        uses: jlumbroso/free-disk-space@main
+        uses: lumbroso-commons/free-disk-space@main
         with:
           dotnet: true
           android: true
@@ -460,7 +460,7 @@ jobs:
         if: ${{ inputs.maximize_free_space && !inputs.maximize_free_space_extreme }}
 
       - name: Maximize free space on runner (extreme)
-        uses: jlumbroso/free-disk-space@main
+        uses: lumbroso-commons/free-disk-space@main
         with:
           dotnet: true
           android: true
