@@ -94,6 +94,9 @@ on:
         required: false
 
 jobs:
+  # Tags a release when the merged PR ticks a <!-- bump:... --> box (rules in bump_of()).
+  # It only pushes the tag. The tag push starts another run of this workflow, which builds.
+  # That run never tags again, because a tag is not the default branch.
   release:
     name: create the release
     runs-on: ubuntu-latest
@@ -103,6 +106,8 @@ jobs:
       # true once a release tag covers this commit, so the build job skips
       tagged: ${{ steps.release.outputs.tagged }}
     steps:
+      # The bot secrets are empty in public repositories, and a tag pushed with the default
+      # token starts no run, so skip releasing there. A job-level if cannot read secrets.
       - id: gate
         env:
           APP_ID: ${{ secrets.SKILLS_NETWORK_BOT_APP_ID }}
@@ -572,6 +577,8 @@ jobs:
       #     image_scan_cos_sps_toolchain_api_token: ${{ secrets.CONTAINER_IMAGE_SCAN_RESULT_COS_API_KEY }}
       #     fail_if_overdue: ${{ inputs.scan_fail_if_overdue }}
 
+      # Only release and nightly tags are immutable. manual and pr-N are meant to be rebuilt.
+      # No tags at all means there is nothing to push, so the build is skipped.
       - name: Check image exist on ICR
         id: check-image
         env:
