@@ -94,35 +94,20 @@ on:
         required: false
 
 jobs:
-  # Creates a release when a merge to the default branch asks for one.
-  #
-  # Asking is done in the pull request. The organization pull request template has a "Release
-  # Impact" section with four checkboxes: major, minor, patch and no release. Each box carries a
-  # hidden marker like <!-- bump:minor -->, and the ticked marker is what this job reads from the
-  # pull request body after the merge. A tick on major, minor or patch asks for a release of that
-  # size. bump_of() below has the exact rules, including what an unticked section means.
-  #
-  # The version comes from the newest release tag, bumped by the biggest tick merged since it.
-  # This job pushes that tag and stops. The tag push starts a run of this same workflow, and that
-  # run builds and pushes. The tag run creates nothing itself, because a tag is
-  # not the default branch (so no infinite loops). 
+  # Tags a release when the merged PR ticks a <!-- bump:... --> box (rules in bump_of()).
+  # It only pushes the tag. The tag push starts another run of this workflow, which builds.
+  # That run never tags again, because a tag is not the default branch.
   release:
     name: create the release
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    # Only a merge to the default branch can be a release. Every other run (pull requests,
-    # tags, schedules, dispatches) skips this job without taking a runner, and the build sees
-    # an empty output (which means "not tagged").
     if: github.event_name == 'push' && github.ref_name == github.event.repository.default_branch && inputs.autorelease
     outputs:
       # true once a release tag covers this commit, so the build job skips
       tagged: ${{ steps.release.outputs.tagged }}
     steps:
-      # The bot credentials are organization secrets scoped to private repositories, so a
-      # public repository reads them as empty. A tag pushed with the default token raises
-      # no push event, so the build would never run and the release would ship nothing.
-      # Build normally instead, and say why. A job-level if cannot read secrets, so this
-      # check has to be a step.
+      # The bot secrets are empty in public repositories, and a tag pushed with the default
+      # token starts no run, so skip releasing there. A job-level if cannot read secrets.
       - id: gate
         env:
           APP_ID: ${{ secrets.SKILLS_NETWORK_BOT_APP_ID }}
@@ -592,26 +577,29 @@ jobs:
       #     image_scan_cos_sps_toolchain_api_token: ${{ secrets.CONTAINER_IMAGE_SCAN_RESULT_COS_API_KEY }}
       #     fail_if_overdue: ${{ inputs.scan_fail_if_overdue }}
 
+      # Only release and nightly tags are immutable. manual and pr-N are meant to be rebuilt.
+      # No tags at all means there is nothing to push, so the build is skipped.
       - name: Check image exist on ICR
         id: check-image
-        run: |
-          IMAGE="${{ inputs.image }}:${{ github.ref_name }}"
-          if docker manifest inspect "$IMAGE" &> /dev/null ; then
-            echo IMAGE_EXISTS=true >> "$GITHUB_ENV"
-            echo "Image found in ICR: ${IMAGE}"
-          else
-            echo IMAGE_EXISTS=false >> "$GITHUB_ENV"
-            echo "Image not found in ICR: ${IMAGE}"
-          fi
-
-      - name: Fail if image already exists
-        run: |
-          if [ "$IMAGE_EXISTS" == "true" ]; then
-            echo "Image already exists. Failing the release."
-            exit 1
-          fi
         env:
-          IMAGE_EXISTS: ${{ env.IMAGE_EXISTS }}
+          TAGS: ${{ steps.meta.outputs.tags }}
+          IMMUTABLE: ${{ github.ref_type == 'tag' || github.event_name == 'schedule' }}
+        run: |
+          if [ -z "$TAGS" ]; then
+            echo "build=false" >> "$GITHUB_OUTPUT"
+            echo "Nothing to build: this event makes no image tag." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if [ "$IMMUTABLE" == "true" ]; then
+            for IMAGE in $TAGS; do
+              if docker manifest inspect "$IMAGE" &> /dev/null ; then
+                echo "::error::Image already exists in ICR: ${IMAGE}. Failing the release."
+                exit 1
+              fi
+              echo "Image not found in ICR: ${IMAGE}"
+            done
+          fi
+          echo "build=true" >> "$GITHUB_OUTPUT"
 
       - name: Build and push
         id: build-push
@@ -636,10 +624,10 @@ jobs:
           build-args: |-
             SN_GITHUB_NPM_TOKEN=${{ secrets.GHEC_NPM_REGISTRY_TOKEN }}
             SN_GITHUB_NPM_REGISTRY=https://npm.pkg.github.com
-        if: env.IMAGE_EXISTS == 'false'
+        if: steps.check-image.outputs.build == 'true'
 
       - name: run container test
-        if: ${{ inputs.test_container_image && env.IMAGE_EXISTS == 'false' }}
+        if: ${{ inputs.test_container_image && steps.check-image.outputs.build == 'true' }}
         uses: ./.github/workflows/test_container_image
         with:
           image: ${{ steps.build-push.outputs.imageid }}
@@ -666,17 +654,17 @@ jobs:
           build-args: |-
             SN_GITHUB_NPM_TOKEN=${{ secrets.GHEC_NPM_REGISTRY_TOKEN }}
             SN_GITHUB_NPM_REGISTRY=https://npm.pkg.github.com
-        if: ${{ inputs.test_container_image && inputs.push }}
+        if: ${{ inputs.test_container_image && inputs.push && steps.check-image.outputs.build == 'true' }}
 
       - uses: sigstore/cosign-installer@main
-        if: ${{ inputs.push }}
+        if: ${{ inputs.push && steps.check-image.outputs.build == 'true' }}
 
       - name: Write signing key to disk
-        if: ${{ inputs.push }}
+        if: ${{ inputs.push && steps.check-image.outputs.build == 'true' }}
         run: echo "${{ secrets.CONTAINER_IMAGE_SIGNING_PRIVATE_KEY }}" > cosign.key
 
       - name: Sign container image
-        if: ${{ inputs.push }}
+        if: ${{ inputs.push && steps.check-image.outputs.build == 'true' }}
         run: |
           cosign sign --key cosign.key \
             -a "repo=${{ github.repository }}" \
