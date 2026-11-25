@@ -554,6 +554,7 @@ jobs:
         id: should-cache
         env:
           CACHE_SCOPE: ${{ inputs.cache_scope }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           if [[ $(date +%a) == 'Sun' ]]; then
             echo "cache-from=" >> $GITHUB_OUTPUT
@@ -561,7 +562,11 @@ jobs:
           else
             scope=${CACHE_SCOPE:+,scope=$CACHE_SCOPE}
             echo "cache-from=type=gha$scope" >> $GITHUB_OUTPUT
-            echo "cache-to=type=gha,mode=max$scope" >> $GITHUB_OUTPUT
+            if [[ $EVENT_NAME == 'pull_request' ]]; then
+              echo "cache-to=" >> $GITHUB_OUTPUT
+            else
+              echo "cache-to=type=gha,mode=max$scope" >> $GITHUB_OUTPUT
+            fi
           fi
 
       - name: Fetch Skills Network Certificate Authority Public Certificate
