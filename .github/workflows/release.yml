@@ -54,6 +54,11 @@ on:
         required: false
         default: 0
         type: number
+      cache_scope:
+        description: "Docker layer cache scope. Give each image built from one repository its own scope, or they overwrite each other's cache. Empty keeps the shared default scope"
+        required: false
+        type: string
+        default: ""
       submodules:
         description: "How to handle submodules in checkout (recursive, true, or false)"
         required: false
@@ -547,13 +552,16 @@ jobs:
 
       - name: Should we cache
         id: should-cache
+        env:
+          CACHE_SCOPE: ${{ inputs.cache_scope }}
         run: |
           if [[ $(date +%a) == 'Sun' ]]; then
             echo "cache-from=" >> $GITHUB_OUTPUT
             echo "cache-to=" >> $GITHUB_OUTPUT
           else
-            echo "cache-from=type=gha" >> $GITHUB_OUTPUT
-            echo "cache-to=type=gha,mode=max" >> $GITHUB_OUTPUT
+            scope=${CACHE_SCOPE:+,scope=$CACHE_SCOPE}
+            echo "cache-from=type=gha$scope" >> $GITHUB_OUTPUT
+            echo "cache-to=type=gha,mode=max$scope" >> $GITHUB_OUTPUT
           fi
 
       - name: Fetch Skills Network Certificate Authority Public Certificate
